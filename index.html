@@ -84,7 +84,6 @@
       max-height: 150px;
       overflow-y: auto;
     }
-    /* Modal pour saisie manuelle des photos */
     .modal {
       display: none;
       position: fixed;
@@ -109,6 +108,7 @@
     }
     .modal-content input {
       margin-bottom: 0.75rem;
+      width: 100%;
     }
     @media (max-width: 700px) {
       table, thead, tbody, th, td, tr { display: block; }
@@ -199,7 +199,6 @@
   let nextId = 1;
   let pendingPhotoFile = null;
 
-  // DOM elements
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const processBtn = document.getElementById('processBtn');
@@ -243,7 +242,6 @@
     }
   }
 
-  // Convertir une date "JJ/MM/AAAA" ou "JJ MM AAAA" en timestamp pour tri
   function parseDateToTimestamp(dateStr) {
     if (!dateStr) return 0;
     let clean = dateStr.replace(/ au /g, ' ').replace(/[^0-9\/]/g, ' ');
@@ -343,60 +341,70 @@
     addLog(`➕ Ligne vide ajoutée.`);
   }
 
-  // Extraction depuis le texte d'un PDF (AEM type)
+  // ---------- Extraction améliorée (sans filtre a priori) ----------
   function parseAEMText(text, filename) {
-    // Vérifier que c'est bien une AEM (contient "Attestation" ou "AEM")
-    if (!text.match(/Attestation|AEM|ASSÉDIC|Unédic/i)) {
-      addLog(`⚠️ ${filename} : ne semble pas être une AEM (ignoré).`);
-      return [];
-    }
-    const results = [];
-    // Extraire la période
+    // On ne filtre plus sur la présence de mots-clés "AEM" ou "Attestation".
+    // On tente d'extraire les champs de manière flexible.
+    
+    // Remplacer les espaces multiples et les sauts de ligne par des espaces simples
+    const clean = text.replace(/\s+/g, ' ').trim();
+    
+    // 1. Extraction de la période (Date embauche et Date de fin)
     let dateDebut = '', dateFin = '';
-    const dateEmbMatch = text.match(/Date embauche\s*:\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i);
-    const dateFinMatch = text.match(/Date de fin du contrat de travail\s*:\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i);
-    if (dateEmbMatch) {
-      dateDebut = `${dateEmbMatch[1]}/${dateEmbMatch[2]}/${dateEmbMatch[3]}`;
-    }
-    if (dateFinMatch) {
-      dateFin = `${dateFinMatch[1]}/${dateFinMatch[2]}/${dateFinMatch[3]}`;
-    }
+    // Recherche "Date embauche" suivie de 3 nombres (jour, mois, année) séparés par des espaces ou /
+    const embRegex = /Date embauche\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
+    const finRegex = /Date de fin du contrat de travail\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
+    let m = clean.match(embRegex);
+    if (m) dateDebut = `${m[1]}/${m[2]}/${m[3]}`;
+    m = clean.match(finRegex);
+    if (m) dateFin = `${m[1]}/${m[2]}/${m[3]}`;
+    
     let dateAffichee = '';
     if (dateDebut && dateFin && dateDebut !== dateFin) {
       dateAffichee = `${dateDebut} au ${dateFin}`;
     } else if (dateDebut) {
       dateAffichee = dateDebut;
     } else {
-      // fallback: chercher une date simple
-      const simpleDate = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-      if (simpleDate) dateAffichee = simpleDate[0];
+      // Fallback : chercher n'importe quelle date au format JJ/MM/AAAA ou JJ MM AAAA
+      const anyDate = clean.match(/(\d{1,2})[\/\s](\d{1,2})[\/\s](\d{4})/);
+      if (anyDate) dateAffichee = `${anyDate[1]}/${anyDate[2]}/${anyDate[3]}`;
     }
-
-    // Extraire employeur (Raison sociale ou nom)
+    
+    // 2. Employeur : "Raison sociale ou nom" ou "Nom d'usage"
     let employeur = '';
-    const raisonMatch = text.match(/Raison sociale ou nom\s*:\s*([^\n]+)/i);
-    if (raisonMatch) employeur = raisonMatch[1].trim();
-    else {
-      const nomMatch = text.match(/Nom d'usage[^\n]*\n\s*([^\n]+)/i);
-      if (nomMatch) employeur = nomMatch[1].trim();
+    const raisonRegex = /Raison sociale ou nom\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
+    const nomRegex = /Nom d'usage\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
+    m = clean.match(raisonRegex);
+    if (m) employeur = m[1].trim();
+    if (!employeur) {
+      m = clean.match(nomRegex);
+      if (m) employeur = m[1].trim();
     }
-
-    // Extraire heures
+    // Si toujours pas, on cherche une ligne qui ressemble à un nom après "SIRET" ou "N°"
+    if (!employeur) {
+      const fallback = clean.match(/SIRET\s*:?\s*\d+\s+([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i);
+      if (fallback) employeur = fallback[1].trim();
+    }
+    
+    // 3. Heures : "Nombre d'heures effectuées"
     let heures = '';
-    const heuresMatch = text.match(/Nombre d'heures effectuées\s*:?\s*(\d+[\.,]?\d*)/i);
-    if (heuresMatch) heures = heuresMatch[1].replace(',', '.');
-
-    // Extraire brut
+    const heuresRegex = /Nombre d'heures effectuées\s*:?\s*(\d+[\.,]?\d*)/i;
+    m = clean.match(heuresRegex);
+    if (m) heures = m[1].replace(',', '.');
+    
+    // 4. Brut : "Salaire brut"
     let brut = '';
-    const brutMatch = text.match(/Salaire brut\s*:?\s*(\d+[\.,]?\d*)\s*€?/i);
-    if (brutMatch) brut = brutMatch[1].replace(',', '.');
-
+    const brutRegex = /Salaire brut\s*:?\s*(\d+[\.,]?\d*)\s*€?/i;
+    m = clean.match(brutRegex);
+    if (m) brut = m[1].replace(',', '.');
+    
     if (dateAffichee && employeur) {
-      results.push({ date: dateAffichee, employeur, heures, brut });
+      addLog(`✅ Extraction réussie dans ${filename} : ${employeur} - ${dateAffichee} (heures: ${heures || '?'}, brut: ${brut || '?'})`);
+      return [{ date: dateAffichee, employeur, heures, brut }];
     } else {
-      addLog(`⚠️ Extraction incomplète dans ${filename} : date ou employeur manquant.`);
+      addLog(`⚠️ Aucune donnée AEM valide dans ${filename} (date ou employeur manquant)`);
+      return [];
     }
-    return results;
   }
 
   async function extractFromPDF(file) {
@@ -495,12 +503,8 @@
     addLog('Traitement terminé.');
   }
 
-  // Exporter en PDF (impression)
   function exportToPDF() {
-    const originalTitle = document.title;
-    document.title = 'AEM_France_Travail';
     window.print();
-    document.title = originalTitle;
   }
 
   // Événements
