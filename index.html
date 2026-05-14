@@ -10,27 +10,15 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <link rel="apple-touch-icon" href="icon.png">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       background: #f5f5f7;
       color: #1c1c1e;
       padding: 1rem;
-      padding-bottom: 2rem;
     }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    h1 {
-      font-size: 1.8rem;
-      font-weight: 600;
-      margin-bottom: 0.25rem;
-    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
     .card {
       background: white;
       border-radius: 1rem;
@@ -46,7 +34,6 @@
       text-align: center;
       background: #fafafc;
       cursor: pointer;
-      transition: 0.2s;
     }
     .btn {
       background: #1c1c1e;
@@ -59,13 +46,8 @@
       cursor: pointer;
       margin: 0.25rem;
     }
-    .btn-secondary {
-      background: #e5e5ea;
-      color: #1c1c1e;
-    }
-    .btn-danger {
-      background: #d32f2f;
-    }
+    .btn-secondary { background: #e5e5ea; color: #1c1c1e; }
+    .btn-danger { background: #d32f2f; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -75,12 +57,8 @@
       border-bottom: 1px solid #e5e5ea;
       padding: 0.75rem 0.5rem;
       text-align: left;
-      vertical-align: top;
     }
-    th {
-      background: #f8f8fa;
-      font-weight: 600;
-    }
+    th { background: #f8f8fa; }
     input {
       width: 100%;
       padding: 0.4rem;
@@ -90,12 +68,11 @@
     }
     .totals {
       display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
+      gap: 1.5rem;
       margin-top: 1rem;
       padding-top: 1rem;
       border-top: 2px solid #e5e5ea;
+      flex-wrap: wrap;
     }
     .log {
       background: #1c1c1e;
@@ -106,7 +83,32 @@
       border-radius: 0.75rem;
       max-height: 150px;
       overflow-y: auto;
-      white-space: pre-wrap;
+    }
+    /* Modal pour saisie manuelle des photos */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      max-width: 90%;
+      width: 400px;
+      border-radius: 1rem;
+      padding: 1.5rem;
+    }
+    .modal-content img {
+      max-width: 100%;
+      margin-bottom: 1rem;
+      border-radius: 0.5rem;
+    }
+    .modal-content input {
+      margin-bottom: 0.75rem;
     }
     @media (max-width: 700px) {
       table, thead, tbody, th, td, tr { display: block; }
@@ -131,7 +133,6 @@
       }
     }
   </style>
-  <!-- Librairies : JSZip pour les ZIP, et PDF.js pour les PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
@@ -149,16 +150,18 @@
     </div>
     <div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
       <button class="btn" id="processBtn">🔍 Importer des fichiers</button>
-      <button class="btn btn-secondary" id="exportBtn">💾 Exporter JSON</button>
+      <button class="btn btn-secondary" id="addRowBtn">➕ Ajouter une ligne vide</button>
+      <button class="btn btn-secondary" id="exportJsonBtn">💾 Exporter JSON</button>
+      <button class="btn btn-secondary" id="exportPdfBtn">🖨️ Exporter PDF</button>
       <button class="btn btn-secondary" id="clearBtn">🗑️ Tout effacer</button>
     </div>
   </div>
 
   <div class="card">
-    <h3 style="margin-bottom: 0.75rem;">📋 AEM extraites</h3>
+    <h3>📋 AEM</h3>
     <div style="overflow-x: auto;">
       <table id="aemTable">
-        <thead><tr><th>Date</th><th>Employeur</th><th>Heures</th><th>Brut (€)</th><th></th></tr></thead>
+        <thead><tr><th>Période / Date</th><th>Employeur</th><th>Heures</th><th>Brut (€)</th><th></th></tr></thead>
         <tbody id="tableBody"></tbody>
       </table>
     </div>
@@ -167,28 +170,54 @@
 
   <div class="card">
     <h3>📋 Journal</h3>
-    <div class="log" id="logArea">✅ Prêt. Utilisez le bouton pour importer vos AEM.</div>
+    <div class="log" id="logArea">✅ Prêt. Importez vos AEM (PDF ou photos).</div>
   </div>
 
   <div class="card" style="text-align: center; font-size: 0.8rem;">
-    📱 Installation : « Partager » → « Ajouter à l’écran d’accueil »<br>
-    Les données restent dans votre navigateur (localStorage).
+    📱 Installation : « Partager » → « Ajouter à l’écran d’accueil »
+  </div>
+</div>
+
+<!-- Modal pour saisie photo -->
+<div id="photoModal" class="modal">
+  <div class="modal-content">
+    <h3>📸 Saisie manuelle depuis la photo</h3>
+    <img id="modalImage" alt="aperçu">
+    <input type="text" id="modalDate" placeholder="Période (ex: 20/04/2017 au 22/04/2017 ou 20/04/2017)">
+    <input type="text" id="modalEmployeur" placeholder="Employeur">
+    <input type="text" id="modalHeures" placeholder="Heures">
+    <input type="text" id="modalBrut" placeholder="Brut (€)">
+    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+      <button class="btn" id="modalConfirm">✅ Ajouter</button>
+      <button class="btn btn-secondary" id="modalCancel">Annuler</button>
+    </div>
   </div>
 </div>
 
 <script>
-  // ---------- Données ----------
   let aemItems = [];
   let nextId = 1;
+  let pendingPhotoFile = null;
 
+  // DOM elements
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const processBtn = document.getElementById('processBtn');
-  const exportBtn = document.getElementById('exportBtn');
+  const addRowBtn = document.getElementById('addRowBtn');
+  const exportJsonBtn = document.getElementById('exportJsonBtn');
+  const exportPdfBtn = document.getElementById('exportPdfBtn');
   const clearBtn = document.getElementById('clearBtn');
   const tableBody = document.getElementById('tableBody');
   const totalsBlock = document.getElementById('totalsBlock');
   const logArea = document.getElementById('logArea');
+  const photoModal = document.getElementById('photoModal');
+  const modalImage = document.getElementById('modalImage');
+  const modalDate = document.getElementById('modalDate');
+  const modalEmployeur = document.getElementById('modalEmployeur');
+  const modalHeures = document.getElementById('modalHeures');
+  const modalBrut = document.getElementById('modalBrut');
+  const modalConfirm = document.getElementById('modalConfirm');
+  const modalCancel = document.getElementById('modalCancel');
 
   function addLog(msg) {
     const p = document.createElement('div');
@@ -197,10 +226,10 @@
     logArea.scrollTop = logArea.scrollHeight;
   }
 
-  // Stockage local
   function saveToLocalStorage() {
     localStorage.setItem('aemData', JSON.stringify({ items: aemItems, nextId: nextId }));
   }
+
   function loadFromLocalStorage() {
     const raw = localStorage.getItem('aemData');
     if (raw) {
@@ -209,25 +238,35 @@
         aemItems = data.items || [];
         nextId = data.nextId || 1;
         renderTable();
-        addLog(`Données chargées (${aemItems.length} AEM).`);
+        addLog(`Chargement : ${aemItems.length} AEM.`);
       } catch(e) {}
     }
   }
 
-  // Rendu du tableau et totaux
+  // Convertir une date "JJ/MM/AAAA" ou "JJ MM AAAA" en timestamp pour tri
+  function parseDateToTimestamp(dateStr) {
+    if (!dateStr) return 0;
+    let clean = dateStr.replace(/ au /g, ' ').replace(/[^0-9\/]/g, ' ');
+    let parts = clean.match(/(\d{1,2})[\/\s](\d{1,2})[\/\s](\d{4})/);
+    if (parts) {
+      return new Date(parts[3], parts[2]-1, parts[1]).getTime();
+    }
+    return 0;
+  }
+
   function renderTable() {
-    const sorted = [...aemItems].sort((a,b) => (a.date || '').localeCompare(b.date || ''));
+    const sorted = [...aemItems].sort((a,b) => parseDateToTimestamp(a.date) - parseDateToTimestamp(b.date));
     tableBody.innerHTML = '';
     let totalHeures = 0, totalBrut = 0;
     sorted.forEach(item => {
       const row = tableBody.insertRow();
       const tdDate = row.insertCell(0);
       const dateInp = document.createElement('input');
-      dateInp.type = 'date';
       dateInp.value = item.date || '';
+      dateInp.placeholder = "JJ/MM/AAAA ou JJ/MM/AAAA au JJ/MM/AAAA";
       dateInp.onchange = e => { item.date = e.target.value; saveToLocalStorage(); renderTable(); };
       tdDate.appendChild(dateInp);
-      tdDate.setAttribute('data-label', 'Date');
+      tdDate.setAttribute('data-label', 'Période');
 
       const tdEmp = row.insertCell(1);
       const empInp = document.createElement('input');
@@ -278,7 +317,6 @@
                              <div><strong>Nb AEM</strong> : ${sorted.length}</div>`;
   }
 
-  // Dédoublonnage strict
   function isDuplicate(newItem, existing) {
     return existing.some(e => e.date === newItem.date && e.employeur === newItem.employeur && e.heures === newItem.heures && e.brut === newItem.brut);
   }
@@ -294,35 +332,70 @@
       }
     }
     if (added) { saveToLocalStorage(); renderTable(); addLog(`✅ ${added} AEM ajoutées depuis ${sourceName}`); }
-    else addLog(`Aucune nouvelle AEM dans ${sourceName}`);
+    else addLog(`ℹ️ Aucune nouvelle AEM dans ${sourceName}`);
   }
 
-  // Extraction depuis le texte (identique à la version précédente)
-  function parseAEMText(text, filename) {
-    const results = [];
-    const lines = text.split(/\r?\n/);
-    let current = { date: '', employeur: '', heures: '', brut: '' };
-    const dateRegex = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/;
-    const heuresRegex = /heures? effectuées?\s*:?\s*(\d+[\.,]?\d*)/i;
-    const brutRegex = /brut\s*:?\s*(\d+[\.,]?\d*)\s*€?/i;
-    const employeurRegex = /employeur\s*:?\s*(.+)/i;
+  function addEmptyRow() {
+    const newItem = { id: nextId++, date: '', employeur: '', heures: '', brut: '', source: 'manuel' };
+    aemItems.push(newItem);
+    saveToLocalStorage();
+    renderTable();
+    addLog(`➕ Ligne vide ajoutée.`);
+  }
 
-    for (let line of lines) {
-      const dateMatch = line.match(dateRegex);
-      const empMatch = line.match(employeurRegex);
-      if (dateMatch && empMatch) {
-        if (current.date && current.employeur) results.push({ ...current });
-        current = { date: dateMatch[1], employeur: empMatch[1].trim(), heures: '', brut: '' };
-      }
-      if (current.date) {
-        const h = line.match(heuresRegex);
-        if (h) current.heures = h[1].replace(',', '.');
-        const b = line.match(brutRegex);
-        if (b) current.brut = b[1].replace(',', '.');
-      }
+  // Extraction depuis le texte d'un PDF (AEM type)
+  function parseAEMText(text, filename) {
+    // Vérifier que c'est bien une AEM (contient "Attestation" ou "AEM")
+    if (!text.match(/Attestation|AEM|ASSÉDIC|Unédic/i)) {
+      addLog(`⚠️ ${filename} : ne semble pas être une AEM (ignoré).`);
+      return [];
     }
-    if (current.date && current.employeur) results.push(current);
-    if (results.length === 0) addLog(`⚠️ Aucune donnée AEM trouvée dans ${filename} (ajustez manuellement)`);
+    const results = [];
+    // Extraire la période
+    let dateDebut = '', dateFin = '';
+    const dateEmbMatch = text.match(/Date embauche\s*:\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i);
+    const dateFinMatch = text.match(/Date de fin du contrat de travail\s*:\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i);
+    if (dateEmbMatch) {
+      dateDebut = `${dateEmbMatch[1]}/${dateEmbMatch[2]}/${dateEmbMatch[3]}`;
+    }
+    if (dateFinMatch) {
+      dateFin = `${dateFinMatch[1]}/${dateFinMatch[2]}/${dateFinMatch[3]}`;
+    }
+    let dateAffichee = '';
+    if (dateDebut && dateFin && dateDebut !== dateFin) {
+      dateAffichee = `${dateDebut} au ${dateFin}`;
+    } else if (dateDebut) {
+      dateAffichee = dateDebut;
+    } else {
+      // fallback: chercher une date simple
+      const simpleDate = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (simpleDate) dateAffichee = simpleDate[0];
+    }
+
+    // Extraire employeur (Raison sociale ou nom)
+    let employeur = '';
+    const raisonMatch = text.match(/Raison sociale ou nom\s*:\s*([^\n]+)/i);
+    if (raisonMatch) employeur = raisonMatch[1].trim();
+    else {
+      const nomMatch = text.match(/Nom d'usage[^\n]*\n\s*([^\n]+)/i);
+      if (nomMatch) employeur = nomMatch[1].trim();
+    }
+
+    // Extraire heures
+    let heures = '';
+    const heuresMatch = text.match(/Nombre d'heures effectuées\s*:?\s*(\d+[\.,]?\d*)/i);
+    if (heuresMatch) heures = heuresMatch[1].replace(',', '.');
+
+    // Extraire brut
+    let brut = '';
+    const brutMatch = text.match(/Salaire brut\s*:?\s*(\d+[\.,]?\d*)\s*€?/i);
+    if (brutMatch) brut = brutMatch[1].replace(',', '.');
+
+    if (dateAffichee && employeur) {
+      results.push({ date: dateAffichee, employeur, heures, brut });
+    } else {
+      addLog(`⚠️ Extraction incomplète dans ${filename} : date ou employeur manquant.`);
+    }
     return results;
   }
 
@@ -351,12 +424,61 @@
     return allExtracted;
   }
 
+  // Gestion des photos : ouverture du modal
+  function handleImage(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      modalImage.src = e.target.result;
+      pendingPhotoFile = file;
+      photoModal.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function closeModal() {
+    photoModal.style.display = 'none';
+    pendingPhotoFile = null;
+    modalDate.value = '';
+    modalEmployeur.value = '';
+    modalHeures.value = '';
+    modalBrut.value = '';
+  }
+
+  modalConfirm.onclick = () => {
+    const dateVal = modalDate.value.trim();
+    const employeurVal = modalEmployeur.value.trim();
+    const heuresVal = modalHeures.value.trim();
+    const brutVal = modalBrut.value.trim();
+    if (dateVal && employeurVal) {
+      const newItem = {
+        id: nextId++,
+        date: dateVal,
+        employeur: employeurVal,
+        heures: heuresVal,
+        brut: brutVal,
+        source: pendingPhotoFile ? pendingPhotoFile.name : 'photo'
+      };
+      if (!isDuplicate(newItem, aemItems)) {
+        aemItems.push(newItem);
+        saveToLocalStorage();
+        renderTable();
+        addLog(`📸 Ajout manuel depuis ${pendingPhotoFile ? pendingPhotoFile.name : 'photo'} : ${employeurVal} - ${dateVal}`);
+      } else {
+        addLog(`⚠️ Doublon ignoré pour ${employeurVal} - ${dateVal}`);
+      }
+    } else {
+      addLog(`❌ Saisie incomplète (date et employeur requis)`);
+    }
+    closeModal();
+  };
+  modalCancel.onclick = closeModal;
+
   async function processSingleFile(file) {
     const name = file.name;
     if (name.endsWith('.pdf')) return await extractFromPDF(file);
     if (name.endsWith('.zip')) return await extractFromZip(file);
     if (name.match(/\.(jpg|jpeg|png|heic)$/i)) {
-      addLog(`📸 ${name} : image détectée – pas d'OCR, ajoutez les données manuellement.`);
+      handleImage(file);
       return [];
     }
     addLog(`Fichier ignoré : ${name}`);
@@ -370,10 +492,18 @@
       const extracted = await processSingleFile(file);
       if (extracted.length) addAEMs(extracted, file.name);
     }
-    addLog('Traitement terminé. Vérifiez les lignes et corrigez si nécessaire.');
+    addLog('Traitement terminé.');
   }
 
-  // Gestion des événements (drag & drop + clic)
+  // Exporter en PDF (impression)
+  function exportToPDF() {
+    const originalTitle = document.title;
+    document.title = 'AEM_France_Travail';
+    window.print();
+    document.title = originalTitle;
+  }
+
+  // Événements
   dropzone.addEventListener('click', () => fileInput.click());
   dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.style.background = '#eef2ff'; });
   dropzone.addEventListener('dragleave', () => dropzone.style.background = '#fafafc');
@@ -389,8 +519,8 @@
     fileInput.value = '';
   });
   processBtn.addEventListener('click', () => fileInput.click());
-
-  exportBtn.addEventListener('click', () => {
+  addRowBtn.addEventListener('click', () => addEmptyRow());
+  exportJsonBtn.addEventListener('click', () => {
     const dataStr = JSON.stringify(aemItems, null, 2);
     const blob = new Blob([dataStr], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
@@ -399,9 +529,9 @@
     a.download = `aem_export_${new Date().toISOString().slice(0,19)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    addLog('Export JSON effectué – sauvegarde de toutes les AEM.');
+    addLog('Export JSON effectué.');
   });
-
+  exportPdfBtn.addEventListener('click', () => exportToPDF());
   clearBtn.addEventListener('click', () => {
     if (confirm('Effacer TOUTES les AEM ?')) {
       aemItems = [];
