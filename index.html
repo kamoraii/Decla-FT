@@ -15,7 +15,6 @@
       margin: 0;
       padding: 0;
     }
-
     body {
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
       background: #f5f5f7;
@@ -23,26 +22,15 @@
       padding: 1rem;
       padding-bottom: 2rem;
     }
-
     .container {
       max-width: 1200px;
       margin: 0 auto;
     }
-
     h1 {
       font-size: 1.8rem;
       font-weight: 600;
       margin-bottom: 0.25rem;
     }
-
-    .sub {
-      color: #666;
-      margin-bottom: 1.5rem;
-      border-left: 4px solid #d32f2f;
-      padding-left: 0.75rem;
-      font-size: 0.9rem;
-    }
-
     .card {
       background: white;
       border-radius: 1rem;
@@ -51,7 +39,6 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
       border: 1px solid #e5e5ea;
     }
-
     .upload-area {
       border: 2px dashed #ccc;
       border-radius: 1rem;
@@ -61,12 +48,6 @@
       cursor: pointer;
       transition: 0.2s;
     }
-
-    .upload-area.drag-over {
-      background: #eef2ff;
-      border-color: #3b82f6;
-    }
-
     .btn {
       background: #1c1c1e;
       color: white;
@@ -78,34 +59,28 @@
       cursor: pointer;
       margin: 0.25rem;
     }
-
     .btn-secondary {
       background: #e5e5ea;
       color: #1c1c1e;
     }
-
     .btn-danger {
       background: #d32f2f;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.85rem;
     }
-
     th, td {
       border-bottom: 1px solid #e5e5ea;
       padding: 0.75rem 0.5rem;
       text-align: left;
       vertical-align: top;
     }
-
     th {
       background: #f8f8fa;
       font-weight: 600;
     }
-
     input {
       width: 100%;
       padding: 0.4rem;
@@ -113,7 +88,6 @@
       border-radius: 0.5rem;
       font-size: 0.85rem;
     }
-
     .totals {
       display: flex;
       justify-content: space-between;
@@ -123,7 +97,6 @@
       padding-top: 1rem;
       border-top: 2px solid #e5e5ea;
     }
-
     .log {
       background: #1c1c1e;
       color: #a5d6ff;
@@ -135,14 +108,9 @@
       overflow-y: auto;
       white-space: pre-wrap;
     }
-
     @media (max-width: 700px) {
-      table, thead, tbody, th, td, tr {
-        display: block;
-      }
-      thead {
-        display: none;
-      }
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
       tr {
         margin-bottom: 1rem;
         border: 1px solid #e5e5ea;
@@ -162,17 +130,8 @@
         width: 35%;
       }
     }
-
-    .warning-banner {
-      background: #fff3e0;
-      border-left: 6px solid #ff9800;
-      padding: 0.75rem;
-      border-radius: 0.5rem;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-    }
   </style>
-  <!-- Librairies pour le traitement des fichiers -->
+  <!-- Librairies : JSZip pour les ZIP, et PDF.js pour les PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
@@ -182,23 +141,16 @@
 <body>
 <div class="container">
   <h1>📄 AEM France Travail</h1>
-  <div class="sub">Attestations Employeur Mensuelles — recopie stricte, aucun calcul créatif</div>
-
-  <div class="warning-banner">
-    ⚠️ L'application ne calcule ni n'interprète rien. Elle recopie UNIQUEMENT les informations extraites des AEM.  
-    Vous devez vérifier chaque ligne et corriger manuellement si besoin. Aucune déduction heures/brut n'est effectuée.
-  </div>
-
   <div class="card">
     <div class="upload-area" id="dropzone">
-      📂 Glissez / déposez vos fichiers (PDF, images, ZIP)<br>
+      📂 Déposez vos fichiers (PDF, images, ZIP)<br>
       ou <strong>cliquez pour sélectionner</strong>
       <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.zip" style="display:none">
     </div>
     <div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
-      <button class="btn" id="processBtn">🔍 Traiter les fichiers sélectionnés</button>
+      <button class="btn" id="processBtn">🔍 Importer des fichiers</button>
       <button class="btn btn-secondary" id="exportBtn">💾 Exporter JSON</button>
-      <button class="btn btn-secondary" id="clearBtn">🗑️ Effacer toutes les données</button>
+      <button class="btn btn-secondary" id="clearBtn">🗑️ Tout effacer</button>
     </div>
   </div>
 
@@ -206,9 +158,7 @@
     <h3 style="margin-bottom: 0.75rem;">📋 AEM extraites</h3>
     <div style="overflow-x: auto;">
       <table id="aemTable">
-        <thead>
-          <tr><th>Date</th><th>Employeur</th><th>Heures</th><th>Brut (€)</th><th style="width:40px"></th></tr>
-        </thead>
+        <thead><tr><th>Date</th><th>Employeur</th><th>Heures</th><th>Brut (€)</th><th></th></tr></thead>
         <tbody id="tableBody"></tbody>
       </table>
     </div>
@@ -216,22 +166,21 @@
   </div>
 
   <div class="card">
-    <h3>📋 Logs système (aucune interprétation cachée)</h3>
-    <div class="log" id="logArea">✅ Prêt. Déposez vos AEM (PDF, photos, ZIP).</div>
+    <h3>📋 Journal</h3>
+    <div class="log" id="logArea">✅ Prêt. Utilisez le bouton pour importer vos AEM.</div>
   </div>
 
   <div class="card" style="text-align: center; font-size: 0.8rem;">
-    📱 Installation sur iPhone : « Partager » → « Ajouter à l’écran d’accueil »<br>
-    Toutes les données restent dans votre navigateur (localStorage). Aucune donnée envoyée à un serveur.
+    📱 Installation : « Partager » → « Ajouter à l’écran d’accueil »<br>
+    Les données restent dans votre navigateur (localStorage).
   </div>
 </div>
 
 <script>
-  // ---------- État ----------
-  let aemItems = [];   // chaque item = { id, date, employeur, heures, brut, sourceFile }
+  // ---------- Données ----------
+  let aemItems = [];
   let nextId = 1;
 
-  // Éléments DOM
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const processBtn = document.getElementById('processBtn');
@@ -246,74 +195,64 @@
     p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
     logArea.appendChild(p);
     logArea.scrollTop = logArea.scrollHeight;
-    console.log(msg);
   }
 
-  // Sauvegarde / chargement localStorage
+  // Stockage local
   function saveToLocalStorage() {
-    const toStore = { items: aemItems, nextId: nextId };
-    localStorage.setItem('aemData', JSON.stringify(toStore));
-    addLog('💾 Données sauvegardées localement.');
+    localStorage.setItem('aemData', JSON.stringify({ items: aemItems, nextId: nextId }));
   }
-
   function loadFromLocalStorage() {
     const raw = localStorage.getItem('aemData');
-    if (!raw) return;
-    try {
-      const data = JSON.parse(raw);
-      aemItems = data.items || [];
-      nextId = data.nextId || 1;
-      renderTable();
-      addLog(`📀 Chargement depuis stockage : ${aemItems.length} AEM.`);
-    } catch(e) { addLog('⚠️ Erreur chargement localStorage'); }
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
+        aemItems = data.items || [];
+        nextId = data.nextId || 1;
+        renderTable();
+        addLog(`Données chargées (${aemItems.length} AEM).`);
+      } catch(e) {}
+    }
   }
 
-  // Rendu tableau + totaux STRICTS (somme directe sans aucune harmonisation)
+  // Rendu du tableau et totaux
   function renderTable() {
-    // Tri chronologique strict (du plus ancien au plus récent)
     const sorted = [...aemItems].sort((a,b) => (a.date || '').localeCompare(b.date || ''));
     tableBody.innerHTML = '';
-    let totalHeures = 0;
-    let totalBrut = 0;
+    let totalHeures = 0, totalBrut = 0;
     sorted.forEach(item => {
       const row = tableBody.insertRow();
-      // Date
       const tdDate = row.insertCell(0);
-      const dateInput = document.createElement('input');
-      dateInput.type = 'date';
-      dateInput.value = item.date || '';
-      dateInput.addEventListener('change', (e) => { item.date = e.target.value; saveToLocalStorage(); renderTable(); });
-      tdDate.appendChild(dateInput);
+      const dateInp = document.createElement('input');
+      dateInp.type = 'date';
+      dateInp.value = item.date || '';
+      dateInp.onchange = e => { item.date = e.target.value; saveToLocalStorage(); renderTable(); };
+      tdDate.appendChild(dateInp);
       tdDate.setAttribute('data-label', 'Date');
 
-      // Employeur
       const tdEmp = row.insertCell(1);
-      const empInput = document.createElement('input');
-      empInput.value = item.employeur || '';
-      empInput.placeholder = 'Employeur';
-      empInput.addEventListener('change', (e) => { item.employeur = e.target.value; saveToLocalStorage(); renderTable(); });
-      tdEmp.appendChild(empInput);
+      const empInp = document.createElement('input');
+      empInp.value = item.employeur || '';
+      empInp.placeholder = 'Employeur';
+      empInp.onchange = e => { item.employeur = e.target.value; saveToLocalStorage(); renderTable(); };
+      tdEmp.appendChild(empInp);
       tdEmp.setAttribute('data-label', 'Employeur');
 
-      // Heures
       const tdH = row.insertCell(2);
-      const hInput = document.createElement('input');
-      hInput.value = item.heures || '';
-      hInput.placeholder = 'ex: 10.5';
-      hInput.addEventListener('change', (e) => { item.heures = e.target.value; saveToLocalStorage(); renderTable(); });
-      tdH.appendChild(hInput);
+      const hInp = document.createElement('input');
+      hInp.value = item.heures || '';
+      hInp.placeholder = 'Heures';
+      hInp.onchange = e => { item.heures = e.target.value; saveToLocalStorage(); renderTable(); };
+      tdH.appendChild(hInp);
       tdH.setAttribute('data-label', 'Heures');
 
-      // Brut
       const tdBrut = row.insertCell(3);
-      const brutInput = document.createElement('input');
-      brutInput.value = item.brut || '';
-      brutInput.placeholder = '€';
-      brutInput.addEventListener('change', (e) => { item.brut = e.target.value; saveToLocalStorage(); renderTable(); });
-      tdBrut.appendChild(brutInput);
-      tdBrut.setAttribute('data-label', 'Brut (€)');
+      const brutInp = document.createElement('input');
+      brutInp.value = item.brut || '';
+      brutInp.placeholder = 'Brut €';
+      brutInp.onchange = e => { item.brut = e.target.value; saveToLocalStorage(); renderTable(); };
+      tdBrut.appendChild(brutInp);
+      tdBrut.setAttribute('data-label', 'Brut');
 
-      // Suppression
       const tdDel = row.insertCell(4);
       const delBtn = document.createElement('button');
       delBtn.textContent = '✖';
@@ -325,116 +264,68 @@
         aemItems = aemItems.filter(i => i.id !== item.id);
         saveToLocalStorage();
         renderTable();
-        addLog(`❌ Suppression AEM du ${item.date || '?'} - ${item.employeur}`);
+        addLog(`Supprimé : ${item.employeur} – ${item.date}`);
       };
       tdDel.appendChild(delBtn);
 
-      // cumul pour totaux (si valeurs numériques valides)
-      let h = parseFloat(item.heures);
-      let b = parseFloat(item.brut);
+      const h = parseFloat(item.heures);
+      const b = parseFloat(item.brut);
       if (!isNaN(h)) totalHeures += h;
       if (!isNaN(b)) totalBrut += b;
     });
-
-    totalsBlock.innerHTML = `
-      <div><strong>Total heures</strong> : ${totalHeures.toFixed(2)} h</div>
-      <div><strong>Total brut</strong> : ${totalBrut.toFixed(2)} €</div>
-      <div><strong>Nb AEM</strong> : ${sorted.length}</div>
-    `;
+    totalsBlock.innerHTML = `<div><strong>Total heures</strong> : ${totalHeures.toFixed(2)} h</div>
+                             <div><strong>Total brut</strong> : ${totalBrut.toFixed(2)} €</div>
+                             <div><strong>Nb AEM</strong> : ${sorted.length}</div>`;
   }
 
-  // ---------- Dédoublonnage STRICT ----------
-  // Selon règles : même date, même employeur, mêmes heures, même brut
-  function isDuplicate(newItem, existingItems) {
-    return existingItems.some(ex => 
-      ex.date === newItem.date &&
-      ex.employeur === newItem.employeur &&
-      ex.heures === newItem.heures &&
-      ex.brut === newItem.brut
-    );
+  // Dédoublonnage strict
+  function isDuplicate(newItem, existing) {
+    return existing.some(e => e.date === newItem.date && e.employeur === newItem.employeur && e.heures === newItem.heures && e.brut === newItem.brut);
   }
 
-  // Ajout d'une AEM sans interprétation, avec dédoublonnage
-  function addAEMsFromExtraction(extractedList, sourceHint) {
-    let addedCount = 0;
-    let duplicateCount = 0;
+  function addAEMs(extractedList, sourceName) {
+    let added = 0;
     for (let raw of extractedList) {
-      // raw contient date, employeur, heures, brut (string exactes lues sur document)
-      if (!raw.date || !raw.employeur) {
-        addLog(`⚠️ Ignoré (date ou employeur manquant) : ${raw.employeur || '?'} / ${raw.date}`);
-        continue;
-      }
-      const newItem = {
-        id: nextId++,
-        date: raw.date,
-        employeur: raw.employeur,
-        heures: raw.heures || '',
-        brut: raw.brut || '',
-        sourceFile: sourceHint
-      };
+      if (!raw.date || !raw.employeur) continue;
+      const newItem = { id: nextId++, date: raw.date, employeur: raw.employeur, heures: raw.heures || '', brut: raw.brut || '', source: sourceName };
       if (!isDuplicate(newItem, aemItems)) {
         aemItems.push(newItem);
-        addedCount++;
-      } else {
-        duplicateCount++;
+        added++;
       }
     }
-    if (addedCount) {
-      saveToLocalStorage();
-      renderTable();
-      addLog(`✅ Ajouté ${addedCount} AEM depuis ${sourceHint} (${duplicateCount} doublons ignorés).`);
-    } else {
-      addLog(`ℹ️ Aucune nouvelle AEM depuis ${sourceHint} (${duplicateCount} doublons).`);
-    }
+    if (added) { saveToLocalStorage(); renderTable(); addLog(`✅ ${added} AEM ajoutées depuis ${sourceName}`); }
+    else addLog(`Aucune nouvelle AEM dans ${sourceName}`);
   }
 
-  // ---------- Extraction STRICTE à partir du texte ----------
-  // On cherche des motifs simples : dates (JJ/MM/AAAA), mots "employeur", "heures", "brut"
-  // Ne JAMAIS inventer : si le champ n'est pas trouvé, on met vide.
+  // Extraction depuis le texte (identique à la version précédente)
   function parseAEMText(text, filename) {
     const results = [];
-    // Découpage par blocs (chaque AEM peut être séparée par saut de ligne ou en-tête)
-    // Approche simple : chercher des motifs répétés
     const lines = text.split(/\r?\n/);
     let current = { date: '', employeur: '', heures: '', brut: '' };
-    let inAEM = false;
-
-    // Expressions régulières pour capturer sans interpréter
     const dateRegex = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/;
     const heuresRegex = /heures? effectuées?\s*:?\s*(\d+[\.,]?\d*)/i;
     const brutRegex = /brut\s*:?\s*(\d+[\.,]?\d*)\s*€?/i;
     const employeurRegex = /employeur\s*:?\s*(.+)/i;
 
     for (let line of lines) {
-      // tentative de détection d'une nouvelle AEM (si on trouve une date et un employeur)
       const dateMatch = line.match(dateRegex);
       const empMatch = line.match(employeurRegex);
       if (dateMatch && empMatch) {
-        if (current.date && current.employeur) {
-          results.push({ ...current });
-        }
-        current = {
-          date: dateMatch[1],
-          employeur: empMatch[1].trim(),
-          heures: '',
-          brut: ''
-        };
-        inAEM = true;
+        if (current.date && current.employeur) results.push({ ...current });
+        current = { date: dateMatch[1], employeur: empMatch[1].trim(), heures: '', brut: '' };
       }
-      if (inAEM) {
-        const hMatch = line.match(heuresRegex);
-        if (hMatch) current.heures = hMatch[1].replace(',', '.');
-        const bMatch = line.match(brutRegex);
-        if (bMatch) current.brut = bMatch[1].replace(',', '.');
+      if (current.date) {
+        const h = line.match(heuresRegex);
+        if (h) current.heures = h[1].replace(',', '.');
+        const b = line.match(brutRegex);
+        if (b) current.brut = b[1].replace(',', '.');
       }
     }
-    if (current.date && current.employeur) results.push({ ...current });
-    
-    if (results.length === 0) addLog(`⚠️ Aucune information AEM trouvée dans ${filename} – vérifiez manuellement.`);
+    if (current.date && current.employeur) results.push(current);
+    if (results.length === 0) addLog(`⚠️ Aucune donnée AEM trouvée dans ${filename} (ajustez manuellement)`);
     return results;
   }
 
-  // Lecture d'un PDF via pdf.js
   async function extractFromPDF(file) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -442,81 +333,61 @@
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      const strings = content.items.map(item => item.str);
-      fullText += strings.join(' ') + '\n';
+      fullText += content.items.map(item => item.str).join(' ') + '\n';
     }
     return parseAEMText(fullText, file.name);
   }
 
-  // Extraction d'image (pas d'OCR => on demande à l'utilisateur de saisir manuellement)
-  async function extractFromImage(file) {
-    addLog(`📸 Fichier image ${file.name} : Aucun OCR (pas d'interprétation). Veuillez ajouter les données manuellement via le tableau.`);
-    return [];  // Aucune extraction automatique – l'utilisateur ajoute à la main
-  }
-
-  // Traitement d'un ZIP : dézipper et traiter chaque fichier interne
-  async function processZip(file) {
+  async function extractFromZip(file) {
     const zip = await JSZip.loadAsync(file);
-    const extracted = [];
+    let allExtracted = [];
     for (let [filename, zipEntry] of Object.entries(zip.files)) {
       if (zipEntry.dir) continue;
       const blob = await zipEntry.async('blob');
-      const innerFile = new File([blob], filename, { type: blob.type });
-      const results = await processSingleFile(innerFile);
-      extracted.push(...results);
+      const innerFile = new File([blob], filename);
+      const extracted = await processSingleFile(innerFile);
+      allExtracted.push(...extracted);
     }
-    return extracted;
+    return allExtracted;
   }
 
-  // Dispatch selon type MIME
   async function processSingleFile(file) {
     const name = file.name;
-    const ext = name.split('.').pop().toLowerCase();
-    if (name.endsWith('.pdf') || file.type === 'application/pdf') {
-      return await extractFromPDF(file);
-    } else if (ext === 'zip' || file.type === 'application/zip') {
-      return await processZip(file);
-    } else if (['jpg','jpeg','png','heic'].includes(ext)) {
-      return await extractFromImage(file);
-    } else {
-      addLog(`📄 Fichier ignoré (type non géré pour extraction auto) : ${name}`);
+    if (name.endsWith('.pdf')) return await extractFromPDF(file);
+    if (name.endsWith('.zip')) return await extractFromZip(file);
+    if (name.match(/\.(jpg|jpeg|png|heic)$/i)) {
+      addLog(`📸 ${name} : image détectée – pas d'OCR, ajoutez les données manuellement.`);
       return [];
     }
+    addLog(`Fichier ignoré : ${name}`);
+    return [];
   }
 
-  // Point d'entrée pour les fichiers uploadés
-  let pendingFiles = [];
   async function processAllFiles(files) {
-    addLog(`🚀 Début traitement de ${files.length} fichier(s) (séquence strictement documentaire)`);
+    addLog(`Traitement de ${files.length} fichier(s)...`);
     for (const file of files) {
-      addLog(`📎 Analyse de : ${file.name}`);
+      addLog(`Analyse : ${file.name}`);
       const extracted = await processSingleFile(file);
-      if (extracted.length > 0) {
-        addAEMsFromExtraction(extracted, file.name);
-      } else {
-        addLog(`ℹ️ Aucune AEM extraite automatiquement de ${file.name}. Vous pouvez ajouter les lignes manuellement.`);
-      }
+      if (extracted.length) addAEMs(extracted, file.name);
     }
-    addLog(`✅ Traitement terminé. Vérifiez et corrigez les données dans le tableau.`);
+    addLog('Traitement terminé. Vérifiez les lignes et corrigez si nécessaire.');
   }
 
-  // Gestion drag & drop
+  // Gestion des événements (drag & drop + clic)
   dropzone.addEventListener('click', () => fileInput.click());
-  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
-  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
-  dropzone.addEventListener('drop', async (e) => {
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.style.background = '#eef2ff'; });
+  dropzone.addEventListener('dragleave', () => dropzone.style.background = '#fafafc');
+  dropzone.addEventListener('drop', async e => {
     e.preventDefault();
-    dropzone.classList.remove('drag-over');
+    dropzone.style.background = '#fafafc';
     const files = Array.from(e.dataTransfer.files);
-    await processAllFiles(files);
+    if (files.length) await processAllFiles(files);
   });
-
-  fileInput.addEventListener('change', async (e) => {
+  fileInput.addEventListener('change', async e => {
     const files = Array.from(e.target.files);
     if (files.length) await processAllFiles(files);
     fileInput.value = '';
   });
-
   processBtn.addEventListener('click', () => fileInput.click());
 
   exportBtn.addEventListener('click', () => {
@@ -528,22 +399,20 @@
     a.download = `aem_export_${new Date().toISOString().slice(0,19)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    addLog('📁 Export JSON effectué.');
+    addLog('Export JSON effectué – sauvegarde de toutes les AEM.');
   });
 
   clearBtn.addEventListener('click', () => {
-    if (confirm('⚠️ Supprimer TOUTES les AEM ? Cette action est irréversible.')) {
+    if (confirm('Effacer TOUTES les AEM ?')) {
       aemItems = [];
       nextId = 1;
       saveToLocalStorage();
       renderTable();
-      addLog('🧹 Toutes les données ont été effacées.');
+      addLog('Toutes les données ont été effacées.');
     }
   });
 
-  // Initialisation
   loadFromLocalStorage();
-  renderTable();
 </script>
 </body>
 </html>
