@@ -19,6 +19,7 @@
     }
     .container { max-width: 1200px; margin: 0 auto; }
     h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1.3rem; margin: 1rem 0 0.5rem; }
     .card {
       background: white;
       border-radius: 1rem;
@@ -47,7 +48,8 @@
       margin: 0.25rem;
     }
     .btn-secondary { background: #e5e5ea; color: #1c1c1e; }
-    .btn-danger { background: #d32f2f; }
+    .btn-success { background: #2e7d32; }
+    .btn-warning { background: #ed6c02; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -84,66 +86,43 @@
       max-height: 150px;
       overflow-y: auto;
     }
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    .modal-content {
-      background: white;
-      max-width: 90%;
-      width: 500px;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      max-height: 90%;
-      overflow-y: auto;
-    }
-    .modal-content img, .modal-content canvas {
-      max-width: 100%;
-      margin-bottom: 1rem;
-      border-radius: 0.5rem;
-      border: 1px solid #ccc;
-    }
-    .date-selectors {
+    .pending-item {
+      border: 1px solid #e0e0e0;
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+      background: #fff8e1;
       display: flex;
-      gap: 1rem;
       flex-wrap: wrap;
-      margin-bottom: 1rem;
-      align-items: center;
+      gap: 1rem;
+      align-items: flex-start;
     }
-    .date-selectors label {
-      font-weight: 600;
-      width: 40px;
+    .pending-preview {
+      flex: 0 0 80px;
+      max-width: 80px;
     }
-    .date-selectors select {
-      padding: 0.4rem;
+    .pending-preview img, .pending-preview canvas {
+      width: 100%;
       border-radius: 0.5rem;
-      border: 1px solid #ccc;
-      background: white;
-      font-size: 0.9rem;
+      border: 1px solid #ddd;
     }
-    .date-group {
+    .pending-fields {
+      flex: 3;
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
-      flex-wrap: wrap;
-      background: #f8f8fa;
-      padding: 0.5rem;
-      border-radius: 0.75rem;
     }
-    .modal-content input[type="text"] {
-      margin-bottom: 0.75rem;
-      width: 100%;
+    .pending-fields input {
+      width: auto;
+      min-width: 100px;
+      flex: 1;
     }
-    .ocr-progress {
-      font-size: 0.8rem;
-      color: #0066cc;
-      margin: 0.5rem 0;
+    .pending-actions {
+      flex: 1;
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
     }
     @media (max-width: 700px) {
       table, thead, tbody, th, td, tr { display: block; }
@@ -166,13 +145,13 @@
         font-weight: 600;
         width: 35%;
       }
-      .date-selectors { flex-direction: column; align-items: stretch; }
-      .date-group { justify-content: space-between; }
+      .pending-item { flex-direction: column; }
+      .pending-fields input { width: 100%; }
+      .pending-actions { justify-content: flex-start; }
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <!-- Tesseract.js pour l'OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -187,17 +166,23 @@
       ou <strong>cliquez pour sélectionner</strong>
       <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.zip" style="display:none">
     </div>
-    <div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+    <div style="margin-top: 1rem;">
       <button class="btn" id="processBtn">🔍 Importer des fichiers</button>
       <button class="btn btn-secondary" id="addRowBtn">➕ Ajouter une ligne vide</button>
       <button class="btn btn-secondary" id="exportJsonBtn">💾 Exporter JSON</button>
-      <button class="btn btn-secondary" id="exportPdfBtn">🖨️ Exporter PDF</button>
+      <button class="btn btn-secondary" id="exportPdfBtn">🖨️ Exporter PDF / PNG</button>
       <button class="btn btn-secondary" id="clearBtn">🗑️ Tout effacer</button>
     </div>
   </div>
 
+  <!-- Zone des documents en attente de complétion -->
+  <div id="pendingZone" class="card" style="display: none;">
+    <h2>📌 Documents à compléter</h2>
+    <div id="pendingList"></div>
+  </div>
+
   <div class="card">
-    <h3>📋 AEM</h3>
+    <h3>📋 AEM validées</h3>
     <div style="overflow-x: auto;">
       <table id="aemTable">
         <thead><tr><th>Période / Date</th><th>Employeur</th><th>Heures</th><th>Brut (€)</th><th></th></tr></thead>
@@ -209,7 +194,7 @@
 
   <div class="card">
     <h3>📋 Journal</h3>
-    <div class="log" id="logArea">✅ Prêt. Importez vos AEM (PDF ou photos).</div>
+    <div class="log" id="logArea">✅ Prêt. Importez vos fichiers (PDF, photos, ZIP).</div>
   </div>
 
   <div class="card" style="text-align: center; font-size: 0.8rem;">
@@ -217,42 +202,12 @@
   </div>
 </div>
 
-<!-- Modal pour saisie manuelle avec sélecteurs de dates corrigés -->
-<div id="manualModal" class="modal">
-  <div class="modal-content">
-    <h3>📄 Saisie manuelle</h3>
-    <div id="modalPreview"></div>
-    
-    <div class="date-selectors">
-      <div class="date-group">
-        <label>Du</label>
-        <select id="duJour"></select>
-        <select id="duMois"></select>
-        <select id="duAnnee"></select>
-      </div>
-      <div class="date-group">
-        <label>Au</label>
-        <select id="auJour"></select>
-        <select id="auMois"></select>
-        <select id="auAnnee"></select>
-      </div>
-    </div>
-    
-    <input type="text" id="modalEmployeur" placeholder="Employeur">
-    <input type="text" id="modalHeures" placeholder="Heures">
-    <input type="text" id="modalBrut" placeholder="Brut (€)">
-    
-    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-      <button class="btn" id="modalConfirm">✅ Ajouter</button>
-      <button class="btn btn-secondary" id="modalCancel">Annuler</button>
-    </div>
-  </div>
-</div>
-
 <script>
-  let aemItems = [];
+  // ---------- État ----------
+  let aemItems = [];          // éléments validés dans le tableau final
   let nextId = 1;
-  let pendingFileForModal = null;
+  let pendingDocuments = [];  // { id, file, preview, extractedData, status }
+  let nextPendingId = 1;
 
   // DOM elements
   const dropzone = document.getElementById('dropzone');
@@ -265,51 +220,10 @@
   const tableBody = document.getElementById('tableBody');
   const totalsBlock = document.getElementById('totalsBlock');
   const logArea = document.getElementById('logArea');
-  const manualModal = document.getElementById('manualModal');
-  const modalPreview = document.getElementById('modalPreview');
-  const modalEmployeur = document.getElementById('modalEmployeur');
-  const modalHeures = document.getElementById('modalHeures');
-  const modalBrut = document.getElementById('modalBrut');
-  const modalConfirm = document.getElementById('modalConfirm');
-  const modalCancel = document.getElementById('modalCancel');
-  
-  // Sélecteurs de dates
-  const duJour = document.getElementById('duJour');
-  const duMois = document.getElementById('duMois');
-  const duAnnee = document.getElementById('duAnnee');
-  const auJour = document.getElementById('auJour');
-  const auMois = document.getElementById('auMois');
-  const auAnnee = document.getElementById('auAnnee');
+  const pendingZone = document.getElementById('pendingZone');
+  const pendingList = document.getElementById('pendingList');
 
-  // Remplir les menus déroulants dynamiquement
-  function populateDateSelects() {
-    // Jours 1-31
-    for (let i = 1; i <= 31; i++) {
-      duJour.appendChild(new Option(i, i));
-      auJour.appendChild(new Option(i, i));
-    }
-    // Mois 1-12
-    for (let i = 1; i <= 12; i++) {
-      duMois.appendChild(new Option(i, i));
-      auMois.appendChild(new Option(i, i));
-    }
-    // Années 2020-2030
-    const currentYear = new Date().getFullYear();
-    for (let i = currentYear-2; i <= currentYear+2; i++) {
-      duAnnee.appendChild(new Option(i, i));
-      auAnnee.appendChild(new Option(i, i));
-    }
-    // Valeurs par défaut : aujourd'hui
-    const now = new Date();
-    duJour.value = now.getDate();
-    duMois.value = now.getMonth()+1;
-    duAnnee.value = now.getFullYear();
-    auJour.value = now.getDate();
-    auMois.value = now.getMonth()+1;
-    auAnnee.value = now.getFullYear();
-  }
-  populateDateSelects();
-
+  // Helper logs
   function addLog(msg) {
     const p = document.createElement('div');
     p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
@@ -317,6 +231,7 @@
     logArea.scrollTop = logArea.scrollHeight;
   }
 
+  // Sauvegarde / chargement localStorage
   function saveToLocalStorage() {
     localStorage.setItem('aemData', JSON.stringify({ items: aemItems, nextId: nextId }));
   }
@@ -334,6 +249,7 @@
     }
   }
 
+  // Conversion de date pour tri
   function parseDateToTimestamp(dateStr) {
     if (!dateStr) return 0;
     let clean = dateStr.replace(/ au /g, ' ').replace(/[^0-9\/]/g, ' ');
@@ -344,6 +260,7 @@
     return 0;
   }
 
+  // Rendu tableau final
   function renderTable() {
     const sorted = [...aemItems].sort((a,b) => parseDateToTimestamp(a.date) - parseDateToTimestamp(b.date));
     tableBody.innerHTML = '';
@@ -411,18 +328,19 @@
     return existing.some(e => e.date === newItem.date && e.employeur === newItem.employeur && e.heures === newItem.heures && e.brut === newItem.brut);
   }
 
-  function addAEMs(extractedList, sourceName) {
-    let added = 0;
-    for (let raw of extractedList) {
-      if (!raw.date || !raw.employeur) continue;
-      const newItem = { id: nextId++, date: raw.date, employeur: raw.employeur, heures: raw.heures || '', brut: raw.brut || '', source: sourceName };
-      if (!isDuplicate(newItem, aemItems)) {
-        aemItems.push(newItem);
-        added++;
-      }
+  function addAEMToTable(entry, sourceName) {
+    if (!entry.date || !entry.employeur) return false;
+    const newItem = { id: nextId++, date: entry.date, employeur: entry.employeur, heures: entry.heures || '', brut: entry.brut || '', source: sourceName };
+    if (!isDuplicate(newItem, aemItems)) {
+      aemItems.push(newItem);
+      saveToLocalStorage();
+      renderTable();
+      addLog(`✅ Ajoutée : ${entry.employeur} - ${entry.date} (heures: ${entry.heures || '?'}, brut: ${entry.brut || '?'})`);
+      return true;
+    } else {
+      addLog(`⚠️ Doublon ignoré : ${entry.employeur} - ${entry.date}`);
+      return false;
     }
-    if (added) { saveToLocalStorage(); renderTable(); addLog(`✅ ${added} AEM ajoutées depuis ${sourceName}`); }
-    else addLog(`ℹ️ Aucune nouvelle AEM dans ${sourceName}`);
   }
 
   function addEmptyRow() {
@@ -434,7 +352,7 @@
   }
 
   // Extraction depuis texte (PDF textuel)
-  function tryExtractFromText(text, filename) {
+  function extractFromText(text) {
     const clean = text.replace(/\s+/g, ' ').trim();
     let dateDebut = '', dateFin = '';
     const debutRegex = /Date de début du contrat\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
@@ -465,22 +383,22 @@
     m = clean.match(brutRegex);
     if (m) brut = m[1].replace(',', '.');
     if (dateAffichee && employeur) {
-      addLog(`✅ Extraction auto réussie dans ${filename} : ${employeur} - ${dateAffichee}`);
-      return [{ date: dateAffichee, employeur, heures, brut }];
+      return { date: dateAffichee, employeur, heures, brut, complete: true };
+    } else {
+      // retour partiel
+      return { date: dateAffichee || '', employeur: employeur || '', heures, brut, complete: false };
     }
-    return null;
   }
 
-  // OCR avec Tesseract sur une image ou un canvas
-  async function ocrImage(imageDataUrl, filename) {
-    addLog(`🔍 Lancement de l'OCR pour ${filename}...`);
+  // OCR via Tesseract
+  async function ocrImage(dataUrl, filename) {
+    addLog(`🔍 OCR sur ${filename}...`);
     const worker = await Tesseract.createWorker('fra');
-    const { data: { text } } = await worker.recognize(imageDataUrl);
+    const { data: { text } } = await worker.recognize(dataUrl);
     await worker.terminate();
-    addLog(`📝 OCR terminé pour ${filename} (${text.length} caractères)`);
-    // Nettoyer le texte
+    addLog(`📝 OCR terminé pour ${filename}`);
     const clean = text.replace(/\s+/g, ' ').trim();
-    // Extraire les mêmes champs que pour le texte
+    // mêmes regex que ci-dessus
     let dateDebut = '', dateFin = '';
     const debutRegex = /Date de début du contrat\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
     const finRegex = /Date de fin du contrat de travail\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
@@ -510,153 +428,37 @@
     m = clean.match(brutRegex);
     if (m) brut = m[1].replace(',', '.');
     if (dateAffichee && employeur) {
-      addLog(`✅ OCR réussi pour ${filename} : ${employeur} - ${dateAffichee}`);
-      return [{ date: dateAffichee, employeur, heures, brut }];
+      return { date: dateAffichee, employeur, heures, brut, complete: true };
     } else {
-      addLog(`⚠️ OCR n'a pas trouvé date/employeur pour ${filename}`);
-      return null;
+      return { date: dateAffichee || '', employeur: employeur || '', heures, brut, complete: false };
     }
   }
 
-  // Ouvrir la modale de saisie manuelle avec aperçu
-  async function openManualModal(file, previewDataUrlOrCanvas) {
-    pendingFileForModal = file;
-    modalPreview.innerHTML = '';
-    if (previewDataUrlOrCanvas instanceof HTMLCanvasElement) {
-      modalPreview.appendChild(previewDataUrlOrCanvas);
-    } else if (typeof previewDataUrlOrCanvas === 'string') {
-      const img = document.createElement('img');
-      img.src = previewDataUrlOrCanvas;
-      modalPreview.appendChild(img);
-    } else {
-      modalPreview.innerHTML = '<p>Aperçu non disponible</p>';
-    }
-    // Réinitialiser les selects avec la date courante
-    const now = new Date();
-    duJour.value = now.getDate();
-    duMois.value = now.getMonth()+1;
-    duAnnee.value = now.getFullYear();
-    auJour.value = now.getDate();
-    auMois.value = now.getMonth()+1;
-    auAnnee.value = now.getFullYear();
-    modalEmployeur.value = '';
-    modalHeures.value = '';
-    modalBrut.value = '';
-    manualModal.style.display = 'flex';
-  }
-
-  function closeModal() {
-    manualModal.style.display = 'none';
-    pendingFileForModal = null;
-    modalPreview.innerHTML = '';
-  }
-
-  function getFormattedDate() {
-    const jourD = duJour.value.padStart(2, '0');
-    const moisD = duMois.value.padStart(2, '0');
-    const anneeD = duAnnee.value;
-    const jourA = auJour.value.padStart(2, '0');
-    const moisA = auMois.value.padStart(2, '0');
-    const anneeA = auAnnee.value;
-    const dateDebut = `${jourD}/${moisD}/${anneeD}`;
-    const dateFin = `${jourA}/${moisA}/${anneeA}`;
-    if (dateDebut === dateFin) return dateDebut;
-    return `${dateDebut} au ${dateFin}`;
-  }
-
-  modalConfirm.onclick = () => {
-    const dateVal = getFormattedDate();
-    const employeurVal = modalEmployeur.value.trim();
-    const heuresVal = modalHeures.value.trim();
-    const brutVal = modalBrut.value.trim();
-    if (dateVal && employeurVal) {
-      const newItem = {
-        id: nextId++,
-        date: dateVal,
-        employeur: employeurVal,
-        heures: heuresVal,
-        brut: brutVal,
-        source: pendingFileForModal ? pendingFileForModal.name : 'manuel'
-      };
-      if (!isDuplicate(newItem, aemItems)) {
-        aemItems.push(newItem);
-        saveToLocalStorage();
-        renderTable();
-        addLog(`📝 Saisie manuelle depuis ${pendingFileForModal ? pendingFileForModal.name : 'formulaire'} : ${employeurVal} - ${dateVal}`);
-      } else {
-        addLog(`⚠️ Doublon ignoré pour ${employeurVal} - ${dateVal}`);
-      }
-    } else {
-      addLog(`❌ Saisie incomplète (date et employeur requis)`);
-    }
-    closeModal();
-  };
-  modalCancel.onclick = closeModal;
-
-  // Générer un aperçu d'un PDF (première page en canvas)
+  // Générer aperçu d'un PDF (première page)
   async function getPDFPreview(file) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 1.0 });
+    const viewport = page.getViewport({ scale: 0.5 });
     const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    canvas.height = viewport.height;
     canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const context = canvas.getContext('2d');
     await page.render({ canvasContext: context, viewport: viewport }).promise;
     return canvas;
   }
 
-  // Traiter un fichier : priorité extraction texte, puis OCR, puis modale
+  // Traiter un fichier (parallèle)
   async function processFile(file) {
     const name = file.name;
     addLog(`Analyse : ${name}`);
-    if (name.match(/\.(jpg|jpeg|png|heic)$/i)) {
-      // Lire l'image pour l'OCR
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const dataUrl = e.target.result;
-        const ocrResult = await ocrImage(dataUrl, name);
-        if (ocrResult && ocrResult.length > 0) {
-          addAEMs(ocrResult, name);
-        } else {
-          await openManualModal(file, dataUrl);
-        }
-      };
-      reader.readAsDataURL(file);
-      return;
-    }
-    if (name.endsWith('.pdf')) {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      // Extraire le texte
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        fullText += content.items.map(item => item.str).join(' ') + '\n';
-      }
-      let extracted = null;
-      if (fullText.trim().length > 0) {
-        extracted = tryExtractFromText(fullText, name);
-      }
-      if (extracted && extracted.length > 0) {
-        addAEMs(extracted, name);
-        return;
-      }
-      // Si texte vide ou extraction échouée, on tente l'OCR sur la première page
-      addLog(`📄 ${name} : pas de texte exploitable, tentative OCR...`);
-      const previewCanvas = await getPDFPreview(file);
-      const dataUrl = previewCanvas.toDataURL('image/png');
-      const ocrResult = await ocrImage(dataUrl, name);
-      if (ocrResult && ocrResult.length > 0) {
-        addAEMs(ocrResult, name);
-      } else {
-        await openManualModal(file, previewCanvas);
-      }
-      return;
-    }
-    if (name.endsWith('.zip')) {
+    let extracted = null;
+    let preview = null;
+    let isImage = name.match(/\.(jpg|jpeg|png|heic)$/i);
+    let isPdf = name.endsWith('.pdf');
+    let isZip = name.endsWith('.zip');
+
+    if (isZip) {
       const zip = await JSZip.loadAsync(file);
       for (let [filename, zipEntry] of Object.entries(zip.files)) {
         if (zipEntry.dir) continue;
@@ -666,22 +468,172 @@
       }
       return;
     }
-    addLog(`Fichier ignoré (type non supporté) : ${name}`);
+
+    if (isImage) {
+      // Lire l'image en dataURL
+      const reader = new FileReader();
+      preview = await new Promise((resolve) => {
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+      extracted = await ocrImage(preview, name);
+    } else if (isPdf) {
+      // Extraire texte d'abord
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(item => item.str).join(' ') + '\n';
+      }
+      if (fullText.trim().length > 0) {
+        extracted = extractFromText(fullText);
+      }
+      if (!extracted || !extracted.complete) {
+        // si pas de texte ou extraction incomplète -> OCR sur 1ère page
+        const canvas = await getPDFPreview(file);
+        preview = canvas;
+        const dataUrl = canvas.toDataURL('image/png');
+        const ocrResult = await ocrImage(dataUrl, name);
+        extracted = ocrResult;
+      } else {
+        preview = await getPDFPreview(file); // pour l'affichage si besoin
+      }
+    } else {
+      addLog(`Fichier ignoré : ${name}`);
+      return;
+    }
+
+    if (extracted && extracted.complete) {
+      // Ajout automatique au tableau
+      addAEMToTable(extracted, name);
+    } else {
+      // Ajout à la liste des documents en attente
+      const pendingId = nextPendingId++;
+      pendingDocuments.push({
+        id: pendingId,
+        file: file,
+        preview: preview,
+        extracted: extracted || { date: '', employeur: '', heures: '', brut: '' },
+        name: name
+      });
+      addLog(`📌 ${name} : extraction partielle, en attente de complétion.`);
+    }
   }
 
   async function processAllFiles(files) {
-    addLog(`Traitement de ${files.length} fichier(s)...`);
-    for (const file of files) {
-      await processFile(file);
+    addLog(`Traitement de ${files.length} fichier(s) en parallèle...`);
+    pendingDocuments = [];
+    nextPendingId = 1;
+    // Traiter chaque fichier asynchrone sans attendre
+    const promises = files.map(f => processFile(f));
+    await Promise.all(promises);
+    addLog(`Analyse terminée. ${pendingDocuments.length} document(s) à compléter.`);
+    renderPendingList();
+  }
+
+  function renderPendingList() {
+    if (pendingDocuments.length === 0) {
+      pendingZone.style.display = 'none';
+      return;
     }
-    addLog('Traitement terminé.');
+    pendingZone.style.display = 'block';
+    pendingList.innerHTML = '';
+    for (const doc of pendingDocuments) {
+      const div = document.createElement('div');
+      div.className = 'pending-item';
+      const previewDiv = document.createElement('div');
+      previewDiv.className = 'pending-preview';
+      if (doc.preview) {
+        if (typeof doc.preview === 'string') {
+          const img = document.createElement('img');
+          img.src = doc.preview;
+          previewDiv.appendChild(img);
+        } else if (doc.preview instanceof HTMLCanvasElement) {
+          previewDiv.appendChild(doc.preview);
+        }
+      } else {
+        previewDiv.innerHTML = '<div>Aperçu indispo</div>';
+      }
+      div.appendChild(previewDiv);
+
+      const fieldsDiv = document.createElement('div');
+      fieldsDiv.className = 'pending-fields';
+      fieldsDiv.innerHTML = `
+        <input type="text" placeholder="Période (JJ/MM/AAAA ou JJ/MM/AAAA au JJ/MM/AAAA)" value="${escapeHtml(doc.extracted.date || '')}" data-field="date" data-id="${doc.id}">
+        <input type="text" placeholder="Employeur" value="${escapeHtml(doc.extracted.employeur || '')}" data-field="employeur" data-id="${doc.id}">
+        <input type="text" placeholder="Heures" value="${escapeHtml(doc.extracted.heures || '')}" data-field="heures" data-id="${doc.id}">
+        <input type="text" placeholder="Brut €" value="${escapeHtml(doc.extracted.brut || '')}" data-field="brut" data-id="${doc.id}">
+      `;
+      div.appendChild(fieldsDiv);
+
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'pending-actions';
+      const validateBtn = document.createElement('button');
+      validateBtn.textContent = '✅ Valider';
+      validateBtn.className = 'btn btn-success';
+      validateBtn.style.fontSize = '0.8rem';
+      validateBtn.style.padding = '0.4rem 0.8rem';
+      validateBtn.onclick = () => validatePending(doc.id);
+      const ignoreBtn = document.createElement('button');
+      ignoreBtn.textContent = '❌ Ignorer';
+      ignoreBtn.className = 'btn btn-secondary';
+      ignoreBtn.style.fontSize = '0.8rem';
+      ignoreBtn.style.padding = '0.4rem 0.8rem';
+      ignoreBtn.onclick = () => ignorePending(doc.id);
+      actionsDiv.appendChild(validateBtn);
+      actionsDiv.appendChild(ignoreBtn);
+      div.appendChild(actionsDiv);
+      pendingList.appendChild(div);
+    }
+    // Attacher les événements de mise à jour des champs
+    document.querySelectorAll('.pending-fields input').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const id = parseInt(inp.dataset.id);
+        const field = inp.dataset.field;
+        const doc = pendingDocuments.find(d => d.id === id);
+        if (doc) {
+          doc.extracted[field] = inp.value;
+        }
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function validatePending(id) {
+    const doc = pendingDocuments.find(d => d.id === id);
+    if (!doc) return;
+    const { date, employeur, heures, brut } = doc.extracted;
+    if (date && employeur) {
+      addAEMToTable({ date, employeur, heures, brut }, doc.name + ' (manuel)');
+      pendingDocuments = pendingDocuments.filter(d => d.id !== id);
+      renderPendingList();
+    } else {
+      addLog(`❌ Validation impossible : date et employeur requis pour ${doc.name}`);
+    }
+  }
+
+  function ignorePending(id) {
+    pendingDocuments = pendingDocuments.filter(d => d.id !== id);
+    renderPendingList();
+    addLog(`🗑️ Document ignoré.`);
   }
 
   function exportToPDF() {
     window.print();
   }
 
-  // Événements
+  // Événements UI
   dropzone.addEventListener('click', () => fileInput.click());
   dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.style.background = '#eef2ff'; });
   dropzone.addEventListener('dragleave', () => dropzone.style.background = '#fafafc');
@@ -714,6 +666,8 @@
     if (confirm('Effacer TOUTES les AEM ?')) {
       aemItems = [];
       nextId = 1;
+      pendingDocuments = [];
+      renderPendingList();
       saveToLocalStorage();
       renderTable();
       addLog('Toutes les données ont été effacées.');
