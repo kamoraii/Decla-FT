@@ -1,655 +1,321 @@
 // =========================
 // APP.JS
 // =========================
-// CONTROLE GENERAL APP
-// =========================
+
+let aemData = [];
+
+let pendingData = [];
 
 // =========================
-// ETAT APPLICATION
+// ELEMENTS
 // =========================
-
-let aemItems = [];
-
-let pendingDocuments = [];
-
-let nextId = 1;
-
-let nextPendingId = 1;
-
-// =========================
-// ELEMENTS DOM
-// =========================
-
-const dropzone =
-document.getElementById('dropzone');
 
 const fileInput =
-document.getElementById('fileInput');
+document.getElementById("fileInput");
 
-const processBtn =
-document.getElementById('processBtn');
+const scanBtn =
+document.getElementById("scanBtn");
 
-const addRowBtn =
-document.getElementById('addRowBtn');
+const addManualBtn =
+document.getElementById("addManualBtn");
 
 const exportJsonBtn =
-document.getElementById('exportJsonBtn');
+document.getElementById("exportJsonBtn");
 
-const exportPdfBtn =
-document.getElementById('exportPdfBtn');
+const printBtn =
+document.getElementById("printBtn");
 
 const clearBtn =
-document.getElementById('clearBtn');
+document.getElementById("clearBtn");
 
 const tableBody =
-document.getElementById('tableBody');
+document.getElementById("tableBody");
 
-const totalsBlock =
-document.getElementById('totalsBlock');
+const pendingContainer =
+document.getElementById("pendingContainer");
 
 const logArea =
-document.getElementById('logArea');
-
-const pendingZone =
-document.getElementById('pendingZone');
-
-const pendingList =
-document.getElementById('pendingList');
+document.getElementById("logArea");
 
 // =========================
-// LOGS
+// LOG
 // =========================
 
 function addLog(message){
 
-    const div =
-    document.createElement('div');
+  const div =
+  document.createElement("div");
 
-    div.textContent =
-    `[${new Date().toLocaleTimeString()}] ${message}`;
+  div.textContent =
+  `[${new Date().toLocaleTimeString()}] ${message}`;
 
-    logArea.appendChild(div);
+  logArea.appendChild(div);
 
-    logArea.scrollTop =
-    logArea.scrollHeight;
+  logArea.scrollTop =
+  logArea.scrollHeight;
 }
 
 // =========================
-// LOCAL STORAGE
+// SAVE
 // =========================
 
 function saveData(){
 
-    localStorage.setItem(
-        'aemData',
-        JSON.stringify(aemItems)
-    );
+  localStorage.setItem(
+    "aemData",
+    JSON.stringify(aemData)
+  );
 }
 
 function loadData(){
 
-    const raw =
-    localStorage.getItem('aemData');
+  const raw =
+  localStorage.getItem("aemData");
 
-    if(raw){
+  if(raw){
 
-        try{
-
-            aemItems =
-            JSON.parse(raw);
-
-            renderTable();
-
-            addLog(
-            `💾 ${aemItems.length} AEM restaurées.`
-            );
-
-        }catch(err){
-
-            addLog(
-            `Erreur restauration localStorage`
-            );
-        }
-    }
-}
-
-// =========================
-// AJOUT TABLEAU
-// =========================
-
-function addAEMToTable(entry){
-
-    if(!entry.date || !entry.employeur){
-
-        addLog(
-        `❌ Date ou employeur manquant`
-        );
-
-        return;
-    }
-
-    const newItem = {
-
-        id: nextId++,
-
-        date: entry.date,
-
-        employeur: entry.employeur,
-
-        heures: entry.heures || '',
-
-        brut: entry.brut || ''
-    };
-
-    // =========================
-    // DOUBLON STRICT
-    // =========================
-
-    if(isDuplicate(newItem,aemItems)){
-
-        addLog(
-        `⚠️ Doublon ignoré`
-        );
-
-        return;
-    }
-
-    aemItems.push(newItem);
-
-    saveData();
+    aemData =
+    JSON.parse(raw);
 
     renderTable();
-
-    addLog(
-    `✅ AEM ajoutée`
-    );
+  }
 }
 
 // =========================
-// TABLEAU
+// TABLE
 // =========================
 
 function renderTable(){
 
-    tableBody.innerHTML = '';
+  tableBody.innerHTML = "";
 
-    let totalHeures = 0;
+  let totalHeures = 0;
 
-    let totalBrut = 0;
+  let totalBrut = 0;
 
-    // =========================
-    // TRI CHRONO
-    // =========================
+  aemData.sort((a,b)=>{
 
-    const sorted =
-    [...aemItems].sort((a,b)=>{
+    return a.date.localeCompare(b.date);
 
-        return parseDate(a.date)
-        - parseDate(b.date);
-    });
+  });
 
-    for(const item of sorted){
+  for(const item of aemData){
 
-        const row =
-        tableBody.insertRow();
+    const tr =
+    document.createElement("tr");
 
-        // =========================
-        // DATE
-        // =========================
+    tr.innerHTML = `
 
-        const tdDate =
-        row.insertCell();
+      <td>
+        <input value="${item.date || ""}">
+      </td>
 
-        const dateInput =
-        document.createElement('input');
+      <td>
+        <input value="${item.employeur || ""}">
+      </td>
 
-        dateInput.type = 'date';
+      <td>
+        <input value="${item.heures || ""}">
+      </td>
 
-        if(item.date){
+      <td>
+        <input value="${item.brut || ""}">
+      </td>
 
-            const parts =
-            item.date.split('/');
+      <td>
+        <button class="delete-btn">
+          ✖
+        </button>
+      </td>
+    `;
 
-            if(parts.length === 3){
+    tr.querySelector("button")
+    .onclick = ()=>{
 
-                dateInput.value =
-                `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
-        }
+      aemData =
+      aemData.filter(a=>a!==item);
 
-        dateInput.onchange = e => {
+      saveData();
 
-            const val = e.target.value;
+      renderTable();
+    };
 
-            if(val){
+    tableBody.appendChild(tr);
 
-                const p =
-                val.split('-');
+    totalHeures +=
+    parseFloat(item.heures || 0);
 
-                item.date =
-                `${p[2]}/${p[1]}/${p[0]}`;
+    totalBrut +=
+    parseFloat(item.brut || 0);
+  }
 
-                saveData();
+  document.getElementById(
+  "totalHeures"
+  ).textContent =
 
-                renderTable();
-            }
-        };
+  `Total heures : ${totalHeures}`;
 
-        tdDate.appendChild(dateInput);
+  document.getElementById(
+  "totalBrut"
+  ).textContent =
 
-        // =========================
-        // EMPLOYEUR
-        // =========================
+  `Total brut : ${totalBrut.toFixed(2)} €`;
 
-        const tdEmp =
-        row.insertCell();
+  document.getElementById(
+  "totalAem"
+  ).textContent =
 
-        const empInput =
-        document.createElement('input');
-
-        empInput.value =
-        item.employeur;
-
-        empInput.setAttribute(
-        'list',
-        'employeursList'
-        );
-
-        empInput.onchange = e => {
-
-            item.employeur =
-            e.target.value;
-
-            saveData();
-        };
-
-        tdEmp.appendChild(empInput);
-
-        // =========================
-        // HEURES
-        // =========================
-
-        const tdH =
-        row.insertCell();
-
-        const hInput =
-        document.createElement('input');
-
-        hInput.value =
-        item.heures;
-
-        hInput.onchange = e => {
-
-            item.heures =
-            e.target.value;
-
-            saveData();
-
-            renderTable();
-        };
-
-        tdH.appendChild(hInput);
-
-        // =========================
-        // BRUT
-        // =========================
-
-        const tdB =
-        row.insertCell();
-
-        const bInput =
-        document.createElement('input');
-
-        bInput.value =
-        item.brut;
-
-        bInput.onchange = e => {
-
-            item.brut =
-            e.target.value;
-
-            saveData();
-
-            renderTable();
-        };
-
-        tdB.appendChild(bInput);
-
-        // =========================
-        // DELETE
-        // =========================
-
-        const tdDel =
-        row.insertCell();
-
-        const delBtn =
-        document.createElement('button');
-
-        delBtn.textContent = '✖';
-
-        delBtn.className = 'btn';
-
-        delBtn.onclick = ()=>{
-
-            aemItems =
-            aemItems.filter(
-                i => i.id !== item.id
-            );
-
-            saveData();
-
-            renderTable();
-        };
-
-        tdDel.appendChild(delBtn);
-
-        // =========================
-        // TOTALS
-        // =========================
-
-        const h =
-        parseFloat(item.heures);
-
-        const b =
-        parseFloat(item.brut);
-
-        if(!isNaN(h))
-        totalHeures += h;
-
-        if(!isNaN(b))
-        totalBrut += b;
-    }
-
-    totalsBlock.innerHTML =
-
-    `<div>
-    <strong>Total heures :</strong>
-    ${totalHeures.toFixed(2)} h
-    </div>
-
-    <div>
-    <strong>Total brut :</strong>
-    ${totalBrut.toFixed(2)} €
-    </div>
-
-    <div>
-    <strong>AEM :</strong>
-    ${sorted.length}
-    </div>`;
-
-    buildEmployeursList();
+  `AEM : ${aemData.length}`;
 }
 
 // =========================
-// DATE TRI
+// PENDING
 // =========================
 
-function parseDate(dateStr){
+function renderPending(){
 
-    if(!dateStr)
-    return 0;
+  if(pendingData.length === 0){
 
-    const parts =
-    dateStr.split('/');
+    pendingContainer.innerHTML =
 
-    if(parts.length !== 3)
-    return 0;
+    `<p style="color:#666;">
+      Aucun document en attente.
+    </p>`;
 
-    return new Date(
-        parts[2],
-        parts[1]-1,
-        parts[0]
-    ).getTime();
-}
+    return;
+  }
 
-// =========================
-// LISTE EMPLOYEURS
-// =========================
+  pendingContainer.innerHTML = "";
 
-function buildEmployeursList(){
+  for(const item of pendingData){
 
-    let list =
-    document.getElementById(
-    'employeursList'
-    );
+    const div =
+    document.createElement("div");
 
-    if(list)
-    list.remove();
+    div.className =
+    "pending-card";
 
-    list =
-    document.createElement('datalist');
+    div.innerHTML = `
 
-    list.id =
-    'employeursList';
+      <h3>Document OCR</h3>
 
-    const unique =
-    [...new Set(
-        aemItems.map(i=>i.employeur)
-    )];
-
-    for(const emp of unique){
-
-        const option =
-        document.createElement('option');
-
-        option.value = emp;
-
-        list.appendChild(option);
-    }
-
-    document.body.appendChild(list);
-}
-
-// =========================
-// DOCUMENTS EN ATTENTE
-// =========================
-
-function addPendingDocument(doc){
-
-    pendingDocuments.push({
-
-        id: nextPendingId++,
-
-        ...doc
-    });
-
-    renderPendingDocuments();
-}
-
-// =========================
-// RENDU ATTENTE
-// =========================
-
-function renderPendingDocuments(){
-
-    if(pendingDocuments.length === 0){
-
-        pendingZone.style.display =
-        'none';
-
-        return;
-    }
-
-    pendingZone.style.display =
-    'block';
-
-    pendingList.innerHTML = '';
-
-    for(const doc of pendingDocuments){
-
-        const div =
-        document.createElement('div');
-
-        div.className =
-        'pending-item';
-
-        // PREVIEW
-
-        const preview =
-        document.createElement('div');
-
-        preview.className =
-        'pending-preview';
-
-        if(typeof doc.preview === 'string'){
-
-            const img =
-            document.createElement('img');
-
-            img.src = doc.preview;
-
-            preview.appendChild(img);
-
-        }else if(
-            doc.preview instanceof
-            HTMLCanvasElement
-        ){
-
-            preview.appendChild(doc.preview);
-        }
-
-        div.appendChild(preview);
-
-        // FIELDS
-
-        const fields =
-        document.createElement('div');
-
-        fields.className =
-        'pending-fields';
-
-        fields.innerHTML = `
+      <div class="pending-grid">
 
         <input
-        type="date"
-        value="${toInputDate(doc.extracted.date)}"
-        id="date_${doc.id}">
+        id="d_${item.id}"
+        placeholder="Date"
+        value="${item.data.date || ""}">
 
         <input
-        type="text"
-        value="${escapeHtml(doc.extracted.employeur)}"
+        id="e_${item.id}"
         placeholder="Employeur"
-        list="employeursList"
-        id="emp_${doc.id}">
+        value="${item.data.employeur || ""}">
 
         <input
-        type="text"
-        value="${escapeHtml(doc.extracted.heures)}"
+        id="h_${item.id}"
         placeholder="Heures"
-        id="h_${doc.id}">
+        value="${item.data.heures || ""}">
 
         <input
-        type="text"
-        value="${escapeHtml(doc.extracted.brut)}"
+        id="b_${item.id}"
         placeholder="Brut"
-        id="b_${doc.id}">
-        `;
+        value="${item.data.brut || ""}">
 
-        div.appendChild(fields);
+      </div>
 
-        // ACTIONS
+      <div class="buttons"
+           style="margin-top:12px;">
 
-        const actions =
-        document.createElement('div');
+        <button
+        class="success"
+        id="v_${item.id}">
 
-        const valBtn =
-        document.createElement('button');
+        ✅ Valider
 
-        valBtn.textContent =
-        '✅ Valider';
+        </button>
 
-        valBtn.className =
-        'btn btn-green';
+        <button
+        class="danger"
+        id="r_${item.id}">
 
-        valBtn.onclick = ()=>{
+        ❌ Refuser
 
-            const dateVal =
-            document
-            .getElementById(
-            `date_${doc.id}`
-            ).value;
+        </button>
 
-            let finalDate = '';
+      </div>
+    `;
 
-            if(dateVal){
+    pendingContainer.appendChild(div);
 
-                const p =
-                dateVal.split('-');
+    // =========================
+    // VALIDATION
+    // =========================
 
-                finalDate =
-                `${p[2]}/${p[1]}/${p[0]}`;
-            }
+    document.getElementById(
+    `v_${item.id}`
+    ).onclick = ()=>{
 
-            addAEMToTable({
+      const finalData = {
 
-                date: finalDate,
+        date:
+        document.getElementById(
+        `d_${item.id}`
+        ).value,
 
-                employeur:
-                document
-                .getElementById(
-                `emp_${doc.id}`
-                ).value,
+        employeur:
+        document.getElementById(
+        `e_${item.id}`
+        ).value,
 
-                heures:
-                document
-                .getElementById(
-                `h_${doc.id}`
-                ).value,
+        heures:
+        document.getElementById(
+        `h_${item.id}`
+        ).value,
 
-                brut:
-                document
-                .getElementById(
-                `b_${doc.id}`
-                ).value
-            });
+        brut:
+        document.getElementById(
+        `b_${item.id}`
+        ).value
+      };
 
-            pendingDocuments =
-            pendingDocuments.filter(
-                d => d.id !== doc.id
-            );
+      aemData.push(finalData);
 
-            renderPendingDocuments();
-        };
+      pendingData =
+      pendingData.filter(
+      p=>p.id!==item.id
+      );
 
-        actions.appendChild(valBtn);
+      saveData();
 
-        div.appendChild(actions);
+      renderPending();
 
-        pendingList.appendChild(div);
-    }
-}
+      renderTable();
 
-// =========================
-// INPUT DATE
-// =========================
+      addLog(
+      "✅ AEM validée"
+      );
+    };
 
-function toInputDate(dateStr){
+    // =========================
+    // REFUS
+    // =========================
 
-    if(!dateStr)
-    return '';
+    document.getElementById(
+    `r_${item.id}`
+    ).onclick = ()=>{
 
-    const p =
-    dateStr.split('/');
+      pendingData =
+      pendingData.filter(
+      p=>p.id!==item.id
+      );
 
-    if(p.length !== 3)
-    return '';
+      renderPending();
 
-    return `${p[2]}-${p[1]}-${p[0]}`;
-}
-
-// =========================
-// HTML SAFE
-// =========================
-
-function escapeHtml(str){
-
-    if(!str)
-    return '';
-
-    return str
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;');
+      addLog(
+      "❌ Document refusé"
+      );
+    };
+  }
 }
 
 // =========================
@@ -658,203 +324,165 @@ function escapeHtml(str){
 
 async function processFile(file){
 
-    addLog(
-    `📄 ${file.name}`
-    );
+  addLog(`📄 ${file.name}`);
 
-    const result =
-    await extractTextOCR(file);
+  const result =
+  await extractTextOCR(file);
 
-    if(!result){
+  if(!result){
 
-        addLog(
-        `❌ OCR impossible`
-        );
+    addLog("❌ OCR impossible");
 
-        return;
-    }
+    return;
+  }
 
-    const parsed =
-    parseAEM(result.text);
+  const parsed =
+  parseAEM(result.text);
 
-    addPendingDocument({
-
-        file:file,
-
-        preview:result.preview,
-
-        extracted:parsed
-    });
-}
-
-// =========================
-// MULTI FILES
-// =========================
-
-async function processFiles(files){
-
-    for(const file of files){
-
-        await processFile(file);
-    }
+  if(!parsed){
 
     addLog(
-    `✅ Analyse terminée`
+    "❌ Pas une AEM"
     );
+
+    return;
+  }
+
+  pendingData.push({
+
+    id:Date.now()+Math.random(),
+
+    data:parsed
+  });
+
+  renderPending();
+
+  addLog(
+  "📌 Document ajouté à vérifier"
+  );
 }
 
 // =========================
-// EVENTS
+// SCAN
 // =========================
 
-dropzone.addEventListener(
-'click',
-()=>fileInput.click()
-);
+scanBtn.onclick = async ()=>{
 
-processBtn.addEventListener(
-'click',
-()=>fileInput.click()
-);
+  const files =
+  Array.from(fileInput.files);
 
-fileInput.addEventListener(
-'change',
-async e => {
-
-    const files =
-    Array.from(e.target.files);
-
-    await processFiles(files);
-
-    fileInput.value = '';
-}
-);
-
-dropzone.addEventListener(
-'dragover',
-e => {
-
-    e.preventDefault();
-
-    dropzone.style.background =
-    '#eef2ff';
-}
-);
-
-dropzone.addEventListener(
-'dragleave',
-()=>{
-
-    dropzone.style.background =
-    '#fafafa';
-}
-);
-
-dropzone.addEventListener(
-'drop',
-async e => {
-
-    e.preventDefault();
-
-    dropzone.style.background =
-    '#fafafa';
-
-    const files =
-    Array.from(
-        e.dataTransfer.files
-    );
-
-    await processFiles(files);
-}
-);
-
-addRowBtn.addEventListener(
-'click',
-()=>{
-
-    addAEMToTable({
-
-        date:'',
-
-        employeur:'',
-
-        heures:'',
-
-        brut:''
-    });
-}
-);
-
-exportJsonBtn.addEventListener(
-'click',
-()=>{
-
-    const blob =
-    new Blob(
-
-        [
-            JSON.stringify(
-                aemItems,
-                null,
-                2
-            )
-        ],
-
-        {
-            type:'application/json'
-        }
-    );
-
-    const url =
-    URL.createObjectURL(blob);
-
-    const a =
-    document.createElement('a');
-
-    a.href = url;
-
-    a.download =
-    'aem_export.json';
-
-    a.click();
-
-    URL.revokeObjectURL(url);
+  if(files.length===0){
 
     addLog(
-    `💾 Export JSON OK`
+    "❌ Aucun fichier"
     );
-}
-);
 
-exportPdfBtn.addEventListener(
-'click',
-()=>window.print()
-);
+    return;
+  }
 
-clearBtn.addEventListener(
-'click',
-()=>{
+  for(const file of files){
 
-    if(confirm(
-    'Tout effacer ?'
-    )){
+    await processFile(file);
+  }
 
-        aemItems = [];
+  addLog(
+  "✅ Analyse terminée"
+  );
+};
 
-        pendingDocuments = [];
+// =========================
+// AJOUT MANUEL
+// =========================
 
-        saveData();
+addManualBtn.onclick = ()=>{
 
-        renderTable();
+  pendingData.push({
 
-        renderPendingDocuments();
+    id:Date.now(),
 
-        addLog(
-        `🗑️ Données effacées`
-        );
+    data:{
+      date:"",
+      employeur:"",
+      heures:"",
+      brut:""
     }
-}
-);
+  });
+
+  renderPending();
+};
+
+// =========================
+// EXPORT JSON
+// =========================
+
+exportJsonBtn.onclick = ()=>{
+
+  const blob =
+  new Blob(
+
+    [
+      JSON.stringify(
+      aemData,
+      null,
+      2
+      )
+    ],
+
+    {
+      type:"application/json"
+    }
+  );
+
+  const a =
+  document.createElement("a");
+
+  a.href =
+  URL.createObjectURL(blob);
+
+  a.download =
+  "aem_export.json";
+
+  a.click();
+
+  addLog(
+  "💾 Export JSON"
+  );
+};
+
+// =========================
+// PDF
+// =========================
+
+printBtn.onclick = ()=>{
+
+  window.print();
+};
+
+// =========================
+// CLEAR
+// =========================
+
+clearBtn.onclick = ()=>{
+
+  if(confirm(
+  "Tout effacer ?"
+  )){
+
+    aemData = [];
+
+    pendingData = [];
+
+    saveData();
+
+    renderPending();
+
+    renderTable();
+
+    addLog(
+    "🗑️ Données effacées"
+    );
+  }
+};
 
 // =========================
 // START
@@ -862,4 +490,10 @@ clearBtn.addEventListener(
 
 loadData();
 
+renderPending();
+
 renderTable();
+
+addLog(
+"Application prête."
+);
