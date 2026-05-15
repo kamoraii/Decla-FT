@@ -140,6 +140,11 @@
       margin-bottom: 0.75rem;
       width: 100%;
     }
+    .ocr-progress {
+      font-size: 0.8rem;
+      color: #0066cc;
+      margin: 0.5rem 0;
+    }
     @media (max-width: 700px) {
       table, thead, tbody, th, td, tr { display: block; }
       thead { display: none; }
@@ -167,6 +172,8 @@
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- Tesseract.js pour l'OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   </script>
@@ -210,7 +217,7 @@
   </div>
 </div>
 
-<!-- Modal pour saisie manuelle avec sélecteurs de dates -->
+<!-- Modal pour saisie manuelle avec sélecteurs de dates corrigés -->
 <div id="manualModal" class="modal">
   <div class="modal-content">
     <h3>📄 Saisie manuelle</h3>
@@ -219,15 +226,15 @@
     <div class="date-selectors">
       <div class="date-group">
         <label>Du</label>
-        <select id="duJour">${[...Array(31)].map((_,i) => `<option value="${i+1}">${i+1}</option>`).join('')}</select>
-        <select id="duMois">${[...Array(12)].map((_,i) => `<option value="${i+1}">${i+1}</option>`).join('')}</select>
-        <select id="duAnnee"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select>
+        <select id="duJour"></select>
+        <select id="duMois"></select>
+        <select id="duAnnee"></select>
       </div>
       <div class="date-group">
         <label>Au</label>
-        <select id="auJour">${[...Array(31)].map((_,i) => `<option value="${i+1}">${i+1}</option>`).join('')}</select>
-        <select id="auMois">${[...Array(12)].map((_,i) => `<option value="${i+1}">${i+1}</option>`).join('')}</select>
-        <select id="auAnnee"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select>
+        <select id="auJour"></select>
+        <select id="auMois"></select>
+        <select id="auAnnee"></select>
       </div>
     </div>
     
@@ -273,6 +280,35 @@
   const auJour = document.getElementById('auJour');
   const auMois = document.getElementById('auMois');
   const auAnnee = document.getElementById('auAnnee');
+
+  // Remplir les menus déroulants dynamiquement
+  function populateDateSelects() {
+    // Jours 1-31
+    for (let i = 1; i <= 31; i++) {
+      duJour.appendChild(new Option(i, i));
+      auJour.appendChild(new Option(i, i));
+    }
+    // Mois 1-12
+    for (let i = 1; i <= 12; i++) {
+      duMois.appendChild(new Option(i, i));
+      auMois.appendChild(new Option(i, i));
+    }
+    // Années 2020-2030
+    const currentYear = new Date().getFullYear();
+    for (let i = currentYear-2; i <= currentYear+2; i++) {
+      duAnnee.appendChild(new Option(i, i));
+      auAnnee.appendChild(new Option(i, i));
+    }
+    // Valeurs par défaut : aujourd'hui
+    const now = new Date();
+    duJour.value = now.getDate();
+    duMois.value = now.getMonth()+1;
+    duAnnee.value = now.getFullYear();
+    auJour.value = now.getDate();
+    auMois.value = now.getMonth()+1;
+    auAnnee.value = now.getFullYear();
+  }
+  populateDateSelects();
 
   function addLog(msg) {
     const p = document.createElement('div');
@@ -397,7 +433,7 @@
     addLog(`➕ Ligne vide ajoutée.`);
   }
 
-  // Fonction d'extraction (inchangée, adaptée à vos AEM)
+  // Extraction depuis texte (PDF textuel)
   function tryExtractFromText(text, filename) {
     const clean = text.replace(/\s+/g, ' ').trim();
     let dateDebut = '', dateFin = '';
@@ -435,6 +471,53 @@
     return null;
   }
 
+  // OCR avec Tesseract sur une image ou un canvas
+  async function ocrImage(imageDataUrl, filename) {
+    addLog(`🔍 Lancement de l'OCR pour ${filename}...`);
+    const worker = await Tesseract.createWorker('fra');
+    const { data: { text } } = await worker.recognize(imageDataUrl);
+    await worker.terminate();
+    addLog(`📝 OCR terminé pour ${filename} (${text.length} caractères)`);
+    // Nettoyer le texte
+    const clean = text.replace(/\s+/g, ' ').trim();
+    // Extraire les mêmes champs que pour le texte
+    let dateDebut = '', dateFin = '';
+    const debutRegex = /Date de début du contrat\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
+    const finRegex = /Date de fin du contrat de travail\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
+    let m = clean.match(debutRegex);
+    if (m) dateDebut = `${m[1]}/${m[2]}/${m[3]}`;
+    m = clean.match(finRegex);
+    if (m) dateFin = `${m[1]}/${m[2]}/${m[3]}`;
+    let dateAffichee = '';
+    if (dateDebut && dateFin && dateDebut !== dateFin) {
+      dateAffichee = `${dateDebut} au ${dateFin}`;
+    } else if (dateDebut) {
+      dateAffichee = dateDebut;
+    } else {
+      const anyDate = clean.match(/(\d{1,2})[\/\s](\d{1,2})[\/\s](\d{4})/);
+      if (anyDate) dateAffichee = `${anyDate[1]}/${anyDate[2]}/${anyDate[3]}`;
+    }
+    let employeur = '';
+    const raisonRegex = /Raison Sociale\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
+    m = clean.match(raisonRegex);
+    if (m) employeur = m[1].trim();
+    let heures = '';
+    const heuresRegex = /Nombre d'heures effectives\s*:?\s*(\d+[\.,]?\d*)/i;
+    m = clean.match(heuresRegex);
+    if (m) heures = m[1].replace(',', '.');
+    let brut = '';
+    const brutRegex = /SALARIE BRUT\s*:?\s*(\d+[\.,]?\d*)/i;
+    m = clean.match(brutRegex);
+    if (m) brut = m[1].replace(',', '.');
+    if (dateAffichee && employeur) {
+      addLog(`✅ OCR réussi pour ${filename} : ${employeur} - ${dateAffichee}`);
+      return [{ date: dateAffichee, employeur, heures, brut }];
+    } else {
+      addLog(`⚠️ OCR n'a pas trouvé date/employeur pour ${filename}`);
+      return null;
+    }
+  }
+
   // Ouvrir la modale de saisie manuelle avec aperçu
   async function openManualModal(file, previewDataUrlOrCanvas) {
     pendingFileForModal = file;
@@ -448,16 +531,14 @@
     } else {
       modalPreview.innerHTML = '<p>Aperçu non disponible</p>';
     }
-    // Réinitialiser les selects avec le mois/année courant
+    // Réinitialiser les selects avec la date courante
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    duAnnee.value = currentYear;
-    duMois.value = currentMonth;
-    auAnnee.value = currentYear;
-    auMois.value = currentMonth;
-    duJour.value = 1;
-    auJour.value = 1;
+    duJour.value = now.getDate();
+    duMois.value = now.getMonth()+1;
+    duAnnee.value = now.getFullYear();
+    auJour.value = now.getDate();
+    auMois.value = now.getMonth()+1;
+    auAnnee.value = now.getFullYear();
     modalEmployeur.value = '';
     modalHeures.value = '';
     modalBrut.value = '';
@@ -470,7 +551,6 @@
     modalPreview.innerHTML = '';
   }
 
-  // Construire la date formatée à partir des selects
   function getFormattedDate() {
     const jourD = duJour.value.padStart(2, '0');
     const moisD = duMois.value.padStart(2, '0');
@@ -527,30 +607,51 @@
     return canvas;
   }
 
-  // Traiter un fichier : tenter l'extraction, sinon ouvrir modale
+  // Traiter un fichier : priorité extraction texte, puis OCR, puis modale
   async function processFile(file) {
     const name = file.name;
     addLog(`Analyse : ${name}`);
     if (name.match(/\.(jpg|jpeg|png|heic)$/i)) {
+      // Lire l'image pour l'OCR
       const reader = new FileReader();
-      reader.onload = (e) => openManualModal(file, e.target.result);
+      reader.onload = async (e) => {
+        const dataUrl = e.target.result;
+        const ocrResult = await ocrImage(dataUrl, name);
+        if (ocrResult && ocrResult.length > 0) {
+          addAEMs(ocrResult, name);
+        } else {
+          await openManualModal(file, dataUrl);
+        }
+      };
       reader.readAsDataURL(file);
       return;
     }
     if (name.endsWith('.pdf')) {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      // Extraire le texte
       let fullText = '';
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
         fullText += content.items.map(item => item.str).join(' ') + '\n';
       }
-      const extracted = tryExtractFromText(fullText, name);
+      let extracted = null;
+      if (fullText.trim().length > 0) {
+        extracted = tryExtractFromText(fullText, name);
+      }
       if (extracted && extracted.length > 0) {
         addAEMs(extracted, name);
+        return;
+      }
+      // Si texte vide ou extraction échouée, on tente l'OCR sur la première page
+      addLog(`📄 ${name} : pas de texte exploitable, tentative OCR...`);
+      const previewCanvas = await getPDFPreview(file);
+      const dataUrl = previewCanvas.toDataURL('image/png');
+      const ocrResult = await ocrImage(dataUrl, name);
+      if (ocrResult && ocrResult.length > 0) {
+        addAEMs(ocrResult, name);
       } else {
-        const previewCanvas = await getPDFPreview(file);
         await openManualModal(file, previewCanvas);
       }
       return;
