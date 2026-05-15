@@ -1,4 +1,4 @@
-const CACHE_NAME = "aem-cache-v1";
+const CACHE_NAME = "aem-cache-v2";
 
 const urlsToCache = [
   "./",
