@@ -97,14 +97,17 @@
     .modal-content {
       background: white;
       max-width: 90%;
-      width: 400px;
+      width: 450px;
       border-radius: 1rem;
       padding: 1.5rem;
+      max-height: 90%;
+      overflow-y: auto;
     }
-    .modal-content img {
+    .modal-content img, .modal-content canvas {
       max-width: 100%;
       margin-bottom: 1rem;
       border-radius: 0.5rem;
+      border: 1px solid #ccc;
     }
     .modal-content input {
       margin-bottom: 0.75rem;
@@ -178,11 +181,11 @@
   </div>
 </div>
 
-<!-- Modal pour saisie photo -->
-<div id="photoModal" class="modal">
+<!-- Modal pour saisie manuelle -->
+<div id="manualModal" class="modal">
   <div class="modal-content">
-    <h3>📸 Saisie manuelle depuis la photo</h3>
-    <img id="modalImage" alt="aperçu">
+    <h3>📄 Saisie manuelle</h3>
+    <div id="modalPreview"></div>
     <input type="text" id="modalDate" placeholder="Période (ex: 20/04/2017 au 22/04/2017 ou 20/04/2017)">
     <input type="text" id="modalEmployeur" placeholder="Employeur">
     <input type="text" id="modalHeures" placeholder="Heures">
@@ -197,8 +200,10 @@
 <script>
   let aemItems = [];
   let nextId = 1;
-  let pendingPhotoFile = null;
+  let pendingFileForModal = null;
+  let pendingPreviewElement = null;
 
+  // DOM elements
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const processBtn = document.getElementById('processBtn');
@@ -209,8 +214,8 @@
   const tableBody = document.getElementById('tableBody');
   const totalsBlock = document.getElementById('totalsBlock');
   const logArea = document.getElementById('logArea');
-  const photoModal = document.getElementById('photoModal');
-  const modalImage = document.getElementById('modalImage');
+  const manualModal = document.getElementById('manualModal');
+  const modalPreview = document.getElementById('modalPreview');
   const modalDate = document.getElementById('modalDate');
   const modalEmployeur = document.getElementById('modalEmployeur');
   const modalHeures = document.getElementById('modalHeures');
@@ -341,36 +346,25 @@
     addLog(`➕ Ligne vide ajoutée.`);
   }
 
-  // ---------- Extraction améliorée (sans filtre a priori) ----------
-  function parseAEMText(text, filename) {
-    // On ne filtre plus sur la présence de mots-clés "AEM" ou "Attestation".
-    // On tente d'extraire les champs de manière flexible.
-    
-    // Remplacer les espaces multiples et les sauts de ligne par des espaces simples
+  // Tentative d'extraction depuis le texte (si disponible)
+  function tryExtractFromText(text, filename) {
     const clean = text.replace(/\s+/g, ' ').trim();
-    
-    // 1. Extraction de la période (Date embauche et Date de fin)
     let dateDebut = '', dateFin = '';
-    // Recherche "Date embauche" suivie de 3 nombres (jour, mois, année) séparés par des espaces ou /
     const embRegex = /Date embauche\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
     const finRegex = /Date de fin du contrat de travail\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
     let m = clean.match(embRegex);
     if (m) dateDebut = `${m[1]}/${m[2]}/${m[3]}`;
     m = clean.match(finRegex);
     if (m) dateFin = `${m[1]}/${m[2]}/${m[3]}`;
-    
     let dateAffichee = '';
     if (dateDebut && dateFin && dateDebut !== dateFin) {
       dateAffichee = `${dateDebut} au ${dateFin}`;
     } else if (dateDebut) {
       dateAffichee = dateDebut;
     } else {
-      // Fallback : chercher n'importe quelle date au format JJ/MM/AAAA ou JJ MM AAAA
       const anyDate = clean.match(/(\d{1,2})[\/\s](\d{1,2})[\/\s](\d{4})/);
       if (anyDate) dateAffichee = `${anyDate[1]}/${anyDate[2]}/${anyDate[3]}`;
     }
-    
-    // 2. Employeur : "Raison sociale ou nom" ou "Nom d'usage"
     let employeur = '';
     const raisonRegex = /Raison sociale ou nom\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
     const nomRegex = /Nom d'usage\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
@@ -380,76 +374,46 @@
       m = clean.match(nomRegex);
       if (m) employeur = m[1].trim();
     }
-    // Si toujours pas, on cherche une ligne qui ressemble à un nom après "SIRET" ou "N°"
-    if (!employeur) {
-      const fallback = clean.match(/SIRET\s*:?\s*\d+\s+([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i);
-      if (fallback) employeur = fallback[1].trim();
-    }
-    
-    // 3. Heures : "Nombre d'heures effectuées"
     let heures = '';
     const heuresRegex = /Nombre d'heures effectuées\s*:?\s*(\d+[\.,]?\d*)/i;
     m = clean.match(heuresRegex);
     if (m) heures = m[1].replace(',', '.');
-    
-    // 4. Brut : "Salaire brut"
     let brut = '';
     const brutRegex = /Salaire brut\s*:?\s*(\d+[\.,]?\d*)\s*€?/i;
     m = clean.match(brutRegex);
     if (m) brut = m[1].replace(',', '.');
-    
+
     if (dateAffichee && employeur) {
-      addLog(`✅ Extraction réussie dans ${filename} : ${employeur} - ${dateAffichee} (heures: ${heures || '?'}, brut: ${brut || '?'})`);
+      addLog(`✅ Extraction auto réussie dans ${filename} : ${employeur} - ${dateAffichee}`);
       return [{ date: dateAffichee, employeur, heures, brut }];
+    }
+    return null;
+  }
+
+  // Ouvrir la modale de saisie manuelle avec un aperçu (pour PDF ou image)
+  async function openManualModal(file, previewDataUrlOrCanvas) {
+    pendingFileForModal = file;
+    modalPreview.innerHTML = '';
+    if (previewDataUrlOrCanvas instanceof HTMLCanvasElement) {
+      modalPreview.appendChild(previewDataUrlOrCanvas);
+    } else if (typeof previewDataUrlOrCanvas === 'string') {
+      const img = document.createElement('img');
+      img.src = previewDataUrlOrCanvas;
+      modalPreview.appendChild(img);
     } else {
-      addLog(`⚠️ Aucune donnée AEM valide dans ${filename} (date ou employeur manquant)`);
-      return [];
+      modalPreview.innerHTML = '<p>Aperçu non disponible</p>';
     }
-  }
-
-  async function extractFromPDF(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      fullText += content.items.map(item => item.str).join(' ') + '\n';
-    }
-    return parseAEMText(fullText, file.name);
-  }
-
-  async function extractFromZip(file) {
-    const zip = await JSZip.loadAsync(file);
-    let allExtracted = [];
-    for (let [filename, zipEntry] of Object.entries(zip.files)) {
-      if (zipEntry.dir) continue;
-      const blob = await zipEntry.async('blob');
-      const innerFile = new File([blob], filename);
-      const extracted = await processSingleFile(innerFile);
-      allExtracted.push(...extracted);
-    }
-    return allExtracted;
-  }
-
-  // Gestion des photos : ouverture du modal
-  function handleImage(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      modalImage.src = e.target.result;
-      pendingPhotoFile = file;
-      photoModal.style.display = 'flex';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function closeModal() {
-    photoModal.style.display = 'none';
-    pendingPhotoFile = null;
     modalDate.value = '';
     modalEmployeur.value = '';
     modalHeures.value = '';
     modalBrut.value = '';
+    manualModal.style.display = 'flex';
+  }
+
+  function closeModal() {
+    manualModal.style.display = 'none';
+    pendingFileForModal = null;
+    modalPreview.innerHTML = '';
   }
 
   modalConfirm.onclick = () => {
@@ -464,13 +428,13 @@
         employeur: employeurVal,
         heures: heuresVal,
         brut: brutVal,
-        source: pendingPhotoFile ? pendingPhotoFile.name : 'photo'
+        source: pendingFileForModal ? pendingFileForModal.name : 'manuel'
       };
       if (!isDuplicate(newItem, aemItems)) {
         aemItems.push(newItem);
         saveToLocalStorage();
         renderTable();
-        addLog(`📸 Ajout manuel depuis ${pendingPhotoFile ? pendingPhotoFile.name : 'photo'} : ${employeurVal} - ${dateVal}`);
+        addLog(`📝 Saisie manuelle depuis ${pendingFileForModal ? pendingFileForModal.name : 'formulaire'} : ${employeurVal} - ${dateVal}`);
       } else {
         addLog(`⚠️ Doublon ignoré pour ${employeurVal} - ${dateVal}`);
       }
@@ -481,24 +445,68 @@
   };
   modalCancel.onclick = closeModal;
 
-  async function processSingleFile(file) {
+  // Générer un aperçu d'un PDF (première page en canvas)
+  async function getPDFPreview(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.0 });
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    await page.render({ canvasContext: context, viewport: viewport }).promise;
+    return canvas;
+  }
+
+  // Traiter un fichier : tenter l'extraction, sinon ouvrir modale
+  async function processFile(file) {
     const name = file.name;
-    if (name.endsWith('.pdf')) return await extractFromPDF(file);
-    if (name.endsWith('.zip')) return await extractFromZip(file);
+    addLog(`Analyse : ${name}`);
     if (name.match(/\.(jpg|jpeg|png|heic)$/i)) {
-      handleImage(file);
-      return [];
+      // Image : pas d'extraction, on ouvre la modale avec aperçu
+      const reader = new FileReader();
+      reader.onload = (e) => openManualModal(file, e.target.result);
+      reader.readAsDataURL(file);
+      return;
     }
-    addLog(`Fichier ignoré : ${name}`);
-    return [];
+    if (name.endsWith('.pdf')) {
+      // Essayer d'extraire le texte
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(item => item.str).join(' ') + '\n';
+      }
+      const extracted = tryExtractFromText(fullText, name);
+      if (extracted && extracted.length > 0) {
+        addAEMs(extracted, name);
+      } else {
+        // Pas de texte ou extraction échouée -> modale avec aperçu de la première page
+        const previewCanvas = await getPDFPreview(file);
+        await openManualModal(file, previewCanvas);
+      }
+      return;
+    }
+    if (name.endsWith('.zip')) {
+      const zip = await JSZip.loadAsync(file);
+      for (let [filename, zipEntry] of Object.entries(zip.files)) {
+        if (zipEntry.dir) continue;
+        const blob = await zipEntry.async('blob');
+        const innerFile = new File([blob], filename);
+        await processFile(innerFile);
+      }
+      return;
+    }
+    addLog(`Fichier ignoré (type non supporté) : ${name}`);
   }
 
   async function processAllFiles(files) {
     addLog(`Traitement de ${files.length} fichier(s)...`);
     for (const file of files) {
-      addLog(`Analyse : ${file.name}`);
-      const extracted = await processSingleFile(file);
-      if (extracted.length) addAEMs(extracted, file.name);
+      await processFile(file);
     }
     addLog('Traitement terminé.');
   }
