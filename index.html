@@ -97,7 +97,7 @@
     .modal-content {
       background: white;
       max-width: 90%;
-      width: 450px;
+      width: 500px;
       border-radius: 1rem;
       padding: 1.5rem;
       max-height: 90%;
@@ -109,7 +109,34 @@
       border-radius: 0.5rem;
       border: 1px solid #ccc;
     }
-    .modal-content input {
+    .date-selectors {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    .date-selectors label {
+      font-weight: 600;
+      width: 40px;
+    }
+    .date-selectors select {
+      padding: 0.4rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+      background: white;
+      font-size: 0.9rem;
+    }
+    .date-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+      background: #f8f8fa;
+      padding: 0.5rem;
+      border-radius: 0.75rem;
+    }
+    .modal-content input[type="text"] {
       margin-bottom: 0.75rem;
       width: 100%;
     }
@@ -134,6 +161,8 @@
         font-weight: 600;
         width: 35%;
       }
+      .date-selectors { flex-direction: column; align-items: stretch; }
+      .date-group { justify-content: space-between; }
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -181,15 +210,31 @@
   </div>
 </div>
 
-<!-- Modal pour saisie manuelle -->
+<!-- Modal pour saisie manuelle avec sélecteurs de dates -->
 <div id="manualModal" class="modal">
   <div class="modal-content">
     <h3>📄 Saisie manuelle</h3>
     <div id="modalPreview"></div>
-    <input type="text" id="modalDate" placeholder="Période (ex: 20/04/2017 au 22/04/2017 ou 20/04/2017)">
+    
+    <div class="date-selectors">
+      <div class="date-group">
+        <label>Du</label>
+        <select id="duJour">${[...Array(31)].map((_,i) => `<option value="${i+1}">${i+1}</option>`).join('')}</select>
+        <select id="duMois">${[...Array(12)].map((_,i) => `<option value="${i+1}">${i+1}</option>`).join('')}</select>
+        <select id="duAnnee"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select>
+      </div>
+      <div class="date-group">
+        <label>Au</label>
+        <select id="auJour">${[...Array(31)].map((_,i) => `<option value="${i+1}">${i+1}</option>`).join('')}</select>
+        <select id="auMois">${[...Array(12)].map((_,i) => `<option value="${i+1}">${i+1}</option>`).join('')}</select>
+        <select id="auAnnee"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select>
+      </div>
+    </div>
+    
     <input type="text" id="modalEmployeur" placeholder="Employeur">
     <input type="text" id="modalHeures" placeholder="Heures">
     <input type="text" id="modalBrut" placeholder="Brut (€)">
+    
     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
       <button class="btn" id="modalConfirm">✅ Ajouter</button>
       <button class="btn btn-secondary" id="modalCancel">Annuler</button>
@@ -201,7 +246,6 @@
   let aemItems = [];
   let nextId = 1;
   let pendingFileForModal = null;
-  let pendingPreviewElement = null;
 
   // DOM elements
   const dropzone = document.getElementById('dropzone');
@@ -216,12 +260,19 @@
   const logArea = document.getElementById('logArea');
   const manualModal = document.getElementById('manualModal');
   const modalPreview = document.getElementById('modalPreview');
-  const modalDate = document.getElementById('modalDate');
   const modalEmployeur = document.getElementById('modalEmployeur');
   const modalHeures = document.getElementById('modalHeures');
   const modalBrut = document.getElementById('modalBrut');
   const modalConfirm = document.getElementById('modalConfirm');
   const modalCancel = document.getElementById('modalCancel');
+  
+  // Sélecteurs de dates
+  const duJour = document.getElementById('duJour');
+  const duMois = document.getElementById('duMois');
+  const duAnnee = document.getElementById('duAnnee');
+  const auJour = document.getElementById('auJour');
+  const auMois = document.getElementById('auMois');
+  const auAnnee = document.getElementById('auAnnee');
 
   function addLog(msg) {
     const p = document.createElement('div');
@@ -346,13 +397,13 @@
     addLog(`➕ Ligne vide ajoutée.`);
   }
 
-  // Tentative d'extraction depuis le texte (si disponible)
+  // Fonction d'extraction (inchangée, adaptée à vos AEM)
   function tryExtractFromText(text, filename) {
     const clean = text.replace(/\s+/g, ' ').trim();
     let dateDebut = '', dateFin = '';
-    const embRegex = /Date embauche\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
+    const debutRegex = /Date de début du contrat\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
     const finRegex = /Date de fin du contrat de travail\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
-    let m = clean.match(embRegex);
+    let m = clean.match(debutRegex);
     if (m) dateDebut = `${m[1]}/${m[2]}/${m[3]}`;
     m = clean.match(finRegex);
     if (m) dateFin = `${m[1]}/${m[2]}/${m[3]}`;
@@ -366,23 +417,17 @@
       if (anyDate) dateAffichee = `${anyDate[1]}/${anyDate[2]}/${anyDate[3]}`;
     }
     let employeur = '';
-    const raisonRegex = /Raison sociale ou nom\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
-    const nomRegex = /Nom d'usage\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
+    const raisonRegex = /Raison Sociale\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
     m = clean.match(raisonRegex);
     if (m) employeur = m[1].trim();
-    if (!employeur) {
-      m = clean.match(nomRegex);
-      if (m) employeur = m[1].trim();
-    }
     let heures = '';
-    const heuresRegex = /Nombre d'heures effectuées\s*:?\s*(\d+[\.,]?\d*)/i;
+    const heuresRegex = /Nombre d'heures effectives\s*:?\s*(\d+[\.,]?\d*)/i;
     m = clean.match(heuresRegex);
     if (m) heures = m[1].replace(',', '.');
     let brut = '';
-    const brutRegex = /Salaire brut\s*:?\s*(\d+[\.,]?\d*)\s*€?/i;
+    const brutRegex = /SALARIE BRUT\s*:?\s*(\d+[\.,]?\d*)/i;
     m = clean.match(brutRegex);
     if (m) brut = m[1].replace(',', '.');
-
     if (dateAffichee && employeur) {
       addLog(`✅ Extraction auto réussie dans ${filename} : ${employeur} - ${dateAffichee}`);
       return [{ date: dateAffichee, employeur, heures, brut }];
@@ -390,7 +435,7 @@
     return null;
   }
 
-  // Ouvrir la modale de saisie manuelle avec un aperçu (pour PDF ou image)
+  // Ouvrir la modale de saisie manuelle avec aperçu
   async function openManualModal(file, previewDataUrlOrCanvas) {
     pendingFileForModal = file;
     modalPreview.innerHTML = '';
@@ -403,7 +448,16 @@
     } else {
       modalPreview.innerHTML = '<p>Aperçu non disponible</p>';
     }
-    modalDate.value = '';
+    // Réinitialiser les selects avec le mois/année courant
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    duAnnee.value = currentYear;
+    duMois.value = currentMonth;
+    auAnnee.value = currentYear;
+    auMois.value = currentMonth;
+    duJour.value = 1;
+    auJour.value = 1;
     modalEmployeur.value = '';
     modalHeures.value = '';
     modalBrut.value = '';
@@ -416,8 +470,22 @@
     modalPreview.innerHTML = '';
   }
 
+  // Construire la date formatée à partir des selects
+  function getFormattedDate() {
+    const jourD = duJour.value.padStart(2, '0');
+    const moisD = duMois.value.padStart(2, '0');
+    const anneeD = duAnnee.value;
+    const jourA = auJour.value.padStart(2, '0');
+    const moisA = auMois.value.padStart(2, '0');
+    const anneeA = auAnnee.value;
+    const dateDebut = `${jourD}/${moisD}/${anneeD}`;
+    const dateFin = `${jourA}/${moisA}/${anneeA}`;
+    if (dateDebut === dateFin) return dateDebut;
+    return `${dateDebut} au ${dateFin}`;
+  }
+
   modalConfirm.onclick = () => {
-    const dateVal = modalDate.value.trim();
+    const dateVal = getFormattedDate();
     const employeurVal = modalEmployeur.value.trim();
     const heuresVal = modalHeures.value.trim();
     const brutVal = modalBrut.value.trim();
@@ -464,14 +532,12 @@
     const name = file.name;
     addLog(`Analyse : ${name}`);
     if (name.match(/\.(jpg|jpeg|png|heic)$/i)) {
-      // Image : pas d'extraction, on ouvre la modale avec aperçu
       const reader = new FileReader();
       reader.onload = (e) => openManualModal(file, e.target.result);
       reader.readAsDataURL(file);
       return;
     }
     if (name.endsWith('.pdf')) {
-      // Essayer d'extraire le texte
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       let fullText = '';
@@ -484,7 +550,6 @@
       if (extracted && extracted.length > 0) {
         addAEMs(extracted, name);
       } else {
-        // Pas de texte ou extraction échouée -> modale avec aperçu de la première page
         const previewCanvas = await getPDFPreview(file);
         await openManualModal(file, previewCanvas);
       }
