@@ -1,21 +1,12 @@
 // =========================
 // PARSER.JS
 // =========================
-// PARSER SPECIAL AEM
-// STRUCTURE DOCUMENTAIRE
+// SPECIAL AEM
 // =========================
 
-// OBJECTIF :
-// Ne PAS lire tout le document.
-//
-// Chercher UNIQUEMENT
-// les zones administratives utiles.
-//
-// =========================
-
-// =========================
+// =====================================================
 // PARSER PRINCIPAL
-// =========================
+// =====================================================
 
 function parseAEM(text){
 
@@ -23,48 +14,43 @@ function parseAEM(text){
     `[PARSER] Analyse structure AEM...`
     );
 
-    // =========================
+    // =====================================================
     // NETTOYAGE OCR
-    // =========================
+    // =====================================================
 
     const clean = text
 
-    // espaces
     .replace(/\s+/g,' ')
 
-    // apostrophes
     .replace(/[’‘`]/g,"'")
 
-    // erreurs OCR fréquentes
     .replace(/\|/g,'I')
 
-    // accents OCR
     .replace(/effectuees/gi,'effectuées')
 
-    // doubles espaces
     .replace(/\s{2,}/g,' ')
 
     .trim();
 
-    // =========================
-    // VALIDATION AEM
-    // =========================
+    // =====================================================
+    // VALIDATION AEM SOUPLE
+    // =====================================================
 
     const isAEM =
 
-        /unedic/i.test(clean)
+    /un.dic/i.test(clean)
 
-        &&
+    ||
 
-        /attestation/i.test(clean)
+    /aem/i.test(clean)
 
-        &&
+    ||
 
-        /heures/i.test(clean)
+    /heures/i.test(clean)
 
-        &&
+    ||
 
-        /salaires?\s+bruts?/i.test(clean);
+    /salaires?\s+brut/i.test(clean);
 
     if(!isAEM){
 
@@ -84,35 +70,35 @@ function parseAEM(text){
     `[PARSER] Structure AEM reconnue`
     );
 
-    // =========================
+    // =====================================================
     // EMPLOYEUR
-    // =========================
+    // =====================================================
 
     let employeur = '';
 
     const employeurRegex =
 
-    /Raison\s+Sociale[\s\S]{0,80}?(?:ou\s+nom)?\s*([A-Z0-9][A-Z0-9\s\-&']{2,60})/i;
+    /Raison\s+Sociale[\s\S]{0,80}?([A-Z0-9][A-Z0-9\s\-&']{2,60})/i;
 
-    const empMatch =
+    const employeurMatch =
     clean.match(employeurRegex);
 
-    if(empMatch){
+    if(employeurMatch){
 
         employeur =
-        empMatch[1]
+        employeurMatch[1]
         .trim();
     }
 
-    // =========================
+    // =====================================================
     // DATE DEBUT
-    // =========================
+    // =====================================================
 
     let dateDebut = '';
 
     const debutRegex =
 
-    /Date\s+d[’']embauche[\s\S]{0,40}?(\d{1,2})[\s\/](\d{1,2})[\s\/](\d{4})/i;
+    /Date\s+d.?embauche[\s\S]{0,50}?(\d{1,2})[\s\/](\d{1,2})[\s\/](\d{4})/i;
 
     const debutMatch =
     clean.match(debutRegex);
@@ -126,15 +112,15 @@ function parseAEM(text){
         `${debutMatch[3]}`;
     }
 
-    // =========================
+    // =====================================================
     // DATE FIN
-    // =========================
+    // =====================================================
 
     let dateFin = '';
 
     const finRegex =
 
-    /Date\s+de\s+fin\s+du\s+contrat[\s\S]{0,40}?(\d{1,2})[\s\/](\d{1,2})[\s\/](\d{4})/i;
+    /Date\s+de\s+fin\s+du\s+contrat[\s\S]{0,50}?(\d{1,2})[\s\/](\d{1,2})[\s\/](\d{4})/i;
 
     const finMatch =
     clean.match(finRegex);
@@ -148,9 +134,9 @@ function parseAEM(text){
         `${finMatch[3]}`;
     }
 
-    // =========================
+    // =====================================================
     // DATE FINALE
-    // =========================
+    // =====================================================
 
     let finalDate = '';
 
@@ -173,15 +159,15 @@ function parseAEM(text){
         dateDebut || dateFin || '';
     }
 
-    // =========================
+    // =====================================================
     // HEURES
-    // =========================
+    // =====================================================
 
     let heures = '';
 
     const heuresRegex =
 
-    /Nombre\s+d.?HEURES[\s\S]{0,40}?(\d+[.,]?\d*)/i;
+    /Nombre[\s\S]{0,30}?HEURES[\s\S]{0,30}?(\d+[.,]?\d*)/i;
 
     const heuresMatch =
     clean.match(heuresRegex);
@@ -193,9 +179,9 @@ function parseAEM(text){
         .replace(',', '.');
     }
 
-    // =========================
+    // =====================================================
     // BRUT
-    // =========================
+    // =====================================================
 
     let brut = '';
 
@@ -213,9 +199,9 @@ function parseAEM(text){
         .replace(',', '.');
     }
 
-    // =========================
+    // =====================================================
     // LOGS
-    // =========================
+    // =====================================================
 
     addLog(
     `[PARSER] Employeur : ${employeur || 'non trouvé'}`
@@ -233,9 +219,9 @@ function parseAEM(text){
     `[PARSER] Brut : ${brut || 'non trouvé'}`
     );
 
-    // =========================
+    // =====================================================
     // RETOUR
-    // =========================
+    // =====================================================
 
     return {
 
@@ -260,9 +246,9 @@ function parseAEM(text){
     };
 }
 
-// =========================
-// DOUBLON STRICT
-// =========================
+// =====================================================
+// DOUBLONS STRICTS
+// =====================================================
 
 function isDuplicate(newItem, existingItems){
 
