@@ -1,372 +1,376 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-content="width=device-width,
-initial-scale=1.0,
-viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
 <title>AEM France Travail</title>
 
 <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b1b1b">
 
-<meta name="theme-color"
-content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<meta name="apple-mobile-web-app-capable"
-content="yes">
-
-<meta name="apple-mobile-web-app-status-bar-style"
-content="black">
-
-<link rel="apple-touch-icon"
-href="icon.png">
-
-<!-- PDF JS -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-
-<!-- ZIP -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-<!-- OCR -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<link rel="apple-touch-icon" href="icon.png">
 
 <style>
 
 *{
-box-sizing:border-box;
-margin:0;
-padding:0;
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
 }
 
 body{
-font-family:system-ui;
-background:#f5f5f7;
-padding:1rem;
-color:#111;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:#f3f4f6;
+  color:#111;
+  padding:16px;
 }
 
 .container{
-max-width:1200px;
-margin:auto;
+  max-width:1200px;
+  margin:auto;
 }
 
-.card{
-background:white;
-padding:1rem;
-border-radius:1rem;
-margin-bottom:1rem;
-box-shadow:0 1px 3px rgba(0,0,0,0.08);
+header{
+  background:white;
+  border-radius:20px;
+  padding:24px;
+  margin-bottom:20px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-h1{
-margin-bottom:1rem;
+header h1{
+  font-size:32px;
+  margin-bottom:8px;
 }
 
-.upload-area{
-border:2px dashed #bbb;
-padding:2rem;
-text-align:center;
-border-radius:1rem;
-background:#fafafa;
-cursor:pointer;
+header p{
+  color:#666;
 }
 
-.upload-area:hover{
-background:#f0f0f0;
+.section{
+  background:white;
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:20px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
-.btn{
-background:#111;
-color:white;
-border:none;
-padding:0.7rem 1rem;
-border-radius:1rem;
-margin:0.3rem;
-cursor:pointer;
+.section h2{
+  margin-bottom:18px;
+  font-size:24px;
 }
 
-.btn:hover{
-opacity:0.9;
+.upload-zone{
+  border:3px dashed #bbb;
+  border-radius:16px;
+  padding:40px;
+  text-align:center;
+  background:#fafafa;
+  transition:0.2s;
 }
 
-.btn-green{
-background:#2e7d32;
+.upload-zone:hover{
+  background:#f0f0f0;
 }
 
-.btn-orange{
-background:#ed6c02;
+.upload-zone input{
+  display:none;
+}
+
+.buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:18px;
+}
+
+button{
+  border:none;
+  border-radius:12px;
+  padding:14px 18px;
+  font-size:15px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.primary{
+  background:#111;
+  color:white;
+}
+
+.secondary{
+  background:#e5e7eb;
+}
+
+.danger{
+  background:#b91c1c;
+  color:white;
+}
+
+.success{
+  background:#15803d;
+  color:white;
+}
+
+.table-container{
+  overflow-x:auto;
 }
 
 table{
-width:100%;
-border-collapse:collapse;
-margin-top:1rem;
+  width:100%;
+  border-collapse:collapse;
 }
 
-th,td{
-padding:0.7rem;
-border-bottom:1px solid #ddd;
-text-align:left;
+thead{
+  background:#111;
+  color:white;
 }
 
 th{
-background:#f5f5f5;
+  padding:14px;
+  text-align:left;
+  font-size:14px;
 }
 
-input{
-width:100%;
-padding:0.5rem;
-border:1px solid #ccc;
-border-radius:0.5rem;
+td{
+  border-bottom:1px solid #ddd;
+  padding:12px;
 }
 
-.pending-item{
-border:1px solid #ddd;
-padding:1rem;
-border-radius:1rem;
-margin-bottom:1rem;
-background:#fff8e1;
+td input{
+  width:100%;
+  border:none;
+  background:transparent;
+  font-size:14px;
 }
 
-.pending-preview img,
-.pending-preview canvas{
-max-width:120px;
-border-radius:0.5rem;
-border:1px solid #ddd;
-margin-bottom:1rem;
+td input:focus{
+  outline:2px solid #111;
+  background:#f9fafb;
 }
 
-.pending-fields{
-display:grid;
-grid-template-columns:
-1fr 1fr 1fr 1fr;
-gap:0.5rem;
-margin-bottom:1rem;
+.delete-btn{
+  width:34px;
+  height:34px;
+  border-radius:8px;
+  background:#111;
+  color:white;
+  border:none;
+}
+
+.totaux{
+  display:flex;
+  gap:30px;
+  flex-wrap:wrap;
+  margin-top:20px;
+  font-size:20px;
+  font-weight:700;
+}
+
+.pending-card{
+  border:2px solid #facc15;
+  background:#fffbeb;
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:16px;
+}
+
+.pending-card h3{
+  margin-bottom:12px;
+}
+
+.pending-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.pending-grid input{
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #ccc;
 }
 
 .log{
-background:#111;
-color:#8fd3ff;
-padding:1rem;
-border-radius:1rem;
-font-family:monospace;
-max-height:180px;
-overflow:auto;
-font-size:0.8rem;
+  background:#111;
+  color:#93c5fd;
+  border-radius:16px;
+  padding:16px;
+  font-family:monospace;
+  max-height:220px;
+  overflow-y:auto;
+  font-size:13px;
 }
 
-.totals{
-margin-top:1rem;
-font-weight:bold;
-display:flex;
-gap:2rem;
-flex-wrap:wrap;
+footer{
+  text-align:center;
+  color:#666;
+  margin-top:30px;
+  font-size:13px;
 }
 
 @media(max-width:700px){
 
-.pending-fields{
-grid-template-columns:1fr;
-}
+  .pending-grid{
+    grid-template-columns:1fr;
+  }
 
-table,thead,tbody,tr,td{
-display:block;
-}
+  .totaux{
+    flex-direction:column;
+    gap:10px;
+  }
 
-thead{
-display:none;
-}
+  table{
+    min-width:650px;
+  }
 
-tr{
-margin-bottom:1rem;
-border:1px solid #ddd;
-padding:1rem;
-border-radius:1rem;
-}
-
-td{
-border:none;
-padding:0.3rem 0;
-}
 }
 
 </style>
-
 </head>
 
 <body>
 
 <div class="container">
 
-<h1>📄 AEM France Travail</h1>
+<header>
+  <h1>📋 Déclaration AEM</h1>
+  <p>Assistant administratif France Travail — OCR AEM strict</p>
+</header>
 
-<div class="card">
+<div class="section">
 
-<div class="upload-area"
-id="dropzone">
+  <h2>📂 Import des documents</h2>
 
-📂 Déposez vos PDF / Photos / ZIP
+  <label class="upload-zone">
 
-<br><br>
+    <strong>Déposer PDF / Photos / ZIP</strong><br><br>
+    ou toucher pour sélectionner
 
-ou cliquez ici
+    <input type="file"
+           id="fileInput"
+           multiple
+           accept=".pdf,.jpg,.jpeg,.png,.zip">
 
-<input type="file"
-id="fileInput"
-multiple
-accept=".pdf,.jpg,.jpeg,.png,.zip"
-style="display:none">
+  </label>
 
-</div>
+  <div class="buttons">
 
-<div style="margin-top:1rem;">
+    <button class="primary" id="scanBtn">
+      🔍 Analyser
+    </button>
 
-<button class="btn"
-id="processBtn">
+    <button class="secondary" id="addManualBtn">
+      ➕ Ligne manuelle
+    </button>
 
-🔍 Importer
+    <button class="secondary" id="exportJsonBtn">
+      💾 Export JSON
+    </button>
 
-</button>
+    <button class="secondary" id="printBtn">
+      🖨️ Export PDF
+    </button>
 
-<button class="btn"
-id="addRowBtn">
+    <button class="danger" id="clearBtn">
+      🗑️ Effacer
+    </button>
 
-➕ Ajouter ligne manuelle
-
-</button>
-
-<button class="btn"
-id="exportJsonBtn">
-
-💾 Export JSON
-
-</button>
-
-<button class="btn"
-id="exportPdfBtn">
-
-🖨️ Export PDF
-
-</button>
-
-<button class="btn btn-orange"
-id="clearBtn">
-
-🗑️ Effacer
-
-</button>
+  </div>
 
 </div>
 
-</div>
+<div class="section">
 
-<!-- DOCUMENTS A VALIDER -->
+  <h2>📌 Documents à vérifier</h2>
 
-<div class="card"
-id="pendingZone"
-style="display:none;">
+  <div id="pendingContainer">
 
-<h2>
-📌 Documents à vérifier
-</h2>
+    <p style="color:#666;">
+      Aucun document en attente.
+    </p>
 
-<br>
-
-<div id="pendingList"></div>
+  </div>
 
 </div>
 
-<!-- TABLEAU FINAL -->
+<div class="section">
 
-<div class="card">
+  <h2>📋 Tableau AEM validées</h2>
 
-<h2>
-📋 Tableau AEM validées
-</h2>
+  <div class="table-container">
 
-<table>
+    <table id="aemTable">
 
-<thead>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Employeur</th>
+          <th>Heures</th>
+          <th>Brut €</th>
+          <th></th>
+        </tr>
+      </thead>
 
-<tr>
+      <tbody id="tableBody"></tbody>
 
-<th>Date</th>
-<th>Employeur</th>
-<th>Heures</th>
-<th>Brut (€)</th>
-<th></th>
+    </table>
 
-</tr>
+  </div>
 
-</thead>
+  <div class="totaux">
 
-<tbody id="tableBody"></tbody>
+    <div id="totalHeures">
+      Total heures : 0
+    </div>
 
-</table>
+    <div id="totalBrut">
+      Total brut : 0 €
+    </div>
 
-<div class="totals"
-id="totalsBlock">
+    <div id="totalAem">
+      AEM : 0
+    </div>
 
-</div>
-
-</div>
-
-<!-- LOGS -->
-
-<div class="card">
-
-<h2>
-📋 Journal
-</h2>
-
-<br>
-
-<div class="log"
-id="logArea">
-
-✅ Application prête.
+  </div>
 
 </div>
 
-</div>
+<div class="section">
 
-<!-- INSTALLATION -->
+  <h2>📄 Journal OCR</h2>
 
-<div class="card"
-style="text-align:center;
-font-size:0.85rem;">
+  <div class="log" id="logArea">
 
-📱 Installation iPhone :
-Partager → Ajouter à l’écran d’accueil
+    Application prête.
 
-</div>
+  </div>
 
 </div>
 
-<!-- TES FICHIERS -->
+<footer>
 
-<script src="ocr.js"></script>
+  Ajouter à l’écran d’accueil via Safari → Partager → Ajouter à l’écran d’accueil
+
+</footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <script src="parser.js"></script>
 
+<script src="ocr.js"></script>
+
 <script src="app.js"></script>
-
-<script>
-
-if("serviceWorker" in navigator){
-
-navigator.serviceWorker.register(
-"./service-worker.js"
-);
-
-}
-
-</script>
 
 </body>
 </html>
