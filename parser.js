@@ -29,12 +29,30 @@ function parseAEM(text){
     );
 
     // =========================
-    // TEXTE NETTOYE
+    // NETTOYAGE OCR
     // =========================
 
-    const clean =
-    text
+    const clean = text
+
+    // espaces
     .replace(/\s+/g,' ')
+
+    // accents OCR
+    .replace(/effectuees/gi,'effectuées')
+    .replace(/effectives/gi,'effectuées')
+
+    // apostrophes
+    .replace(/[’‘`]/g,"'")
+
+    // erreurs OCR fréquentes
+    .replace(/\|/g,'I')
+
+    // symbole euro
+    .replace(/€/g,'€ ')
+
+    // doubles espaces
+    .replace(/\s{2,}/g,' ')
+
     .trim();
 
     // =========================
@@ -101,9 +119,11 @@ function parseAEM(text){
 
     const heuresPatterns = [
 
-        /Nombre d.?HEURES effectuées\s*:?\s*(\d+[.,]?\d*)/i,
+        /nombre.{0,20}heures.{0,20}(\d+[.,]?\d*)/i,
 
-        /Nombre d'heures effectives\s*:?\s*(\d+[.,]?\d*)/i
+        /heures.{0,10}effectu.{0,10}(\d+[.,]?\d*)/i,
+
+        /nombre d.?heures effectuees.{0,10}(\d+[.,]?\d*)/i
     ];
 
     for(const regex of heuresPatterns){
@@ -129,9 +149,11 @@ function parseAEM(text){
 
     const brutPatterns = [
 
-        /SALARIE BRUT\s*:?\s*(\d+[.,]?\d*)/i,
+        /salarie brut.{0,10}(\d+[.,]?\d*)/i,
 
-        /Salaire brut\s*:?\s*(\d+[.,]?\d*)/i
+        /salaire brut.{0,10}(\d+[.,]?\d*)/i,
+
+        /brut.{0,10}(\d+[.,]?\d*)/i
     ];
 
     for(const regex of brutPatterns){
