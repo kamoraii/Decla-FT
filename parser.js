@@ -1,274 +1,118 @@
-// =========================
-// PARSER.JS
-// =========================
-// SPECIAL AEM
-// =========================
-
-// =====================================================
-// PARSER PRINCIPAL
-// =====================================================
-
-function parseAEM(text){
-
-    addLog(
-    `[PARSER] Analyse structure AEM...`
-    );
-
-    // =====================================================
-    // NETTOYAGE OCR
-    // =====================================================
-
-    const clean = text
-
-    .replace(/\s+/g,' ')
-
-    .replace(/[’‘`]/g,"'")
-
-    .replace(/\|/g,'I')
-
-    .replace(/effectuees/gi,'effectuées')
-
-    .replace(/\s{2,}/g,' ')
-
+function normalizeText(text) {
+  return text
+    .replace(/\r/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
-
-    // =====================================================
-    // VALIDATION AEM SOUPLE
-    // =====================================================
-
-    const isAEM =
-
-    /un.dic/i.test(clean)
-
-    ||
-
-    /aem/i.test(clean)
-
-    ||
-
-    /heures/i.test(clean)
-
-    ||
-
-    /salaires?\s+brut/i.test(clean);
-
-    if(!isAEM){
-
-        addLog(
-        `[PARSER] Document ignoré : pas une AEM`
-        );
-
-        return {
-
-            complete:false,
-
-            ignored:true
-        };
-    }
-
-    addLog(
-    `[PARSER] Structure AEM reconnue`
-    );
-
-    // =====================================================
-    // EMPLOYEUR
-    // =====================================================
-
-    let employeur = '';
-
-    const employeurRegex =
-
-    /Raison\s+Sociale[\s\S]{0,80}?([A-Z0-9][A-Z0-9\s\-&']{2,60})/i;
-
-    const employeurMatch =
-    clean.match(employeurRegex);
-
-    if(employeurMatch){
-
-        employeur =
-        employeurMatch[1]
-        .trim();
-    }
-
-    // =====================================================
-    // DATE DEBUT
-    // =====================================================
-
-    let dateDebut = '';
-
-    const debutRegex =
-
-    /Date\s+d.?embauche[\s\S]{0,50}?(\d{1,2})[\s\/](\d{1,2})[\s\/](\d{4})/i;
-
-    const debutMatch =
-    clean.match(debutRegex);
-
-    if(debutMatch){
-
-        dateDebut =
-
-        `${debutMatch[1]}/` +
-        `${debutMatch[2]}/` +
-        `${debutMatch[3]}`;
-    }
-
-    // =====================================================
-    // DATE FIN
-    // =====================================================
-
-    let dateFin = '';
-
-    const finRegex =
-
-    /Date\s+de\s+fin\s+du\s+contrat[\s\S]{0,50}?(\d{1,2})[\s\/](\d{1,2})[\s\/](\d{4})/i;
-
-    const finMatch =
-    clean.match(finRegex);
-
-    if(finMatch){
-
-        dateFin =
-
-        `${finMatch[1]}/` +
-        `${finMatch[2]}/` +
-        `${finMatch[3]}`;
-    }
-
-    // =====================================================
-    // DATE FINALE
-    // =====================================================
-
-    let finalDate = '';
-
-    if(dateDebut && dateFin){
-
-        if(dateDebut === dateFin){
-
-            finalDate =
-            dateDebut;
-
-        }else{
-
-            finalDate =
-            `${dateDebut} au ${dateFin}`;
-        }
-
-    }else{
-
-        finalDate =
-        dateDebut || dateFin || '';
-    }
-
-    // =====================================================
-    // HEURES
-    // =====================================================
-
-    let heures = '';
-
-    const heuresRegex =
-
-    /Nombre[\s\S]{0,30}?HEURES[\s\S]{0,30}?(\d+[.,]?\d*)/i;
-
-    const heuresMatch =
-    clean.match(heuresRegex);
-
-    if(heuresMatch){
-
-        heures =
-        heuresMatch[1]
-        .replace(',', '.');
-    }
-
-    // =====================================================
-    // BRUT
-    // =====================================================
-
-    let brut = '';
-
-    const brutRegex =
-
-    /SALAIRES?\s+BRUTS?[\s\S]{0,40}?(\d+[.,]?\d*)/i;
-
-    const brutMatch =
-    clean.match(brutRegex);
-
-    if(brutMatch){
-
-        brut =
-        brutMatch[1]
-        .replace(',', '.');
-    }
-
-    // =====================================================
-    // LOGS
-    // =====================================================
-
-    addLog(
-    `[PARSER] Employeur : ${employeur || 'non trouvé'}`
-    );
-
-    addLog(
-    `[PARSER] Date : ${finalDate || 'non trouvée'}`
-    );
-
-    addLog(
-    `[PARSER] Heures : ${heures || 'non trouvées'}`
-    );
-
-    addLog(
-    `[PARSER] Brut : ${brut || 'non trouvé'}`
-    );
-
-    // =====================================================
-    // RETOUR
-    // =====================================================
-
-    return {
-
-        employeur:
-        employeur || '',
-
-        date:
-        finalDate || '',
-
-        heures:
-        heures || '',
-
-        brut:
-        brut || '',
-
-        complete:
-        (
-            employeur !== ''
-            &&
-            finalDate !== ''
-        )
-    };
 }
 
-// =====================================================
-// DOUBLONS STRICTS
-// =====================================================
+function extractField(text, label, maxLength = 80) {
+  const index = text.toLowerCase().indexOf(label.toLowerCase());
 
-function isDuplicate(newItem, existingItems){
+  if (index === -1) return "";
 
-    return existingItems.some(item =>
+  const after = text.substring(index + label.length);
 
-        item.date === newItem.date
+  return after
+    .trim()
+    .substring(0, maxLength)
+    .split("  ")[0]
+    .trim();
+}
 
-        &&
+function extractDate(text, label) {
+  const regex = new RegExp(
+    label + ".*?(\\d{2})\\s?(\\d{2})\\s?(\\d{4})",
+    "i"
+  );
 
-        item.employeur ===
-        newItem.employeur
+  const match = text.match(regex);
 
-        &&
+  if (!match) return "";
 
-        item.heures ===
-        newItem.heures
+  return `${match[1]}/${match[2]}/${match[3]}`;
+}
 
-        &&
+function extractHours(text) {
+  const regex =
+    /Nombre d.?heures effectuées.*?(\d+[.,]?\d*)/i;
 
-        item.brut ===
-        newItem.brut
-    );
+  const match = text.match(regex);
+
+  if (!match) return "";
+
+  return match[1].replace(",", ".");
+}
+
+function extractBrut(text) {
+  const regex =
+    /SALAIRES BRUTS.*?(\d+[.,]?\d*)/i;
+
+  const match = text.match(regex);
+
+  if (!match) return "";
+
+  return match[1].replace(",", ".");
+}
+
+function isAEM(text) {
+  const checks = [
+    "ATTESTATION (AEM)",
+    "Nombre d'heures effectuées",
+    "SALAIRES BRUTS",
+    "Raison Sociale"
+  ];
+
+  return checks.every(c =>
+    text.toLowerCase().includes(c.toLowerCase())
+  );
+}
+
+function parseAEM(rawText) {
+
+  const text = normalizeText(rawText);
+
+  console.log("[PARSER] Analyse structure AEM...");
+
+  if (!isAEM(text)) {
+    console.log("[PARSER] Document refusé : pas une AEM");
+    return null;
+  }
+
+  const employeur =
+    extractField(text, "Raison Sociale");
+
+  const dateDebut =
+    extractDate(text, "Date d'embauche");
+
+  const dateFin =
+    extractDate(text, "Date de fin du contrat de travail");
+
+  const heures =
+    extractHours(text);
+
+  const brut =
+    extractBrut(text);
+
+  let dateFinale = "";
+
+  if (dateDebut && dateFin) {
+
+    if (dateDebut === dateFin) {
+      dateFinale = dateDebut;
+    } else {
+      dateFinale =
+        `${dateDebut} au ${dateFin}`;
+    }
+
+  } else {
+    dateFinale = dateDebut || dateFin;
+  }
+
+  return {
+    date: dateFinale,
+    employeur: employeur,
+    heures: heures,
+    brut: brut
+  };
 }
