@@ -1,680 +1,372 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>AEM France Travail</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#111111">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="apple-touch-icon" href="icon.png">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      background: #f5f5f7;
-      color: #1c1c1e;
-      padding: 1rem;
-    }
-    .container { max-width: 1200px; margin: 0 auto; }
-    h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
-    h2 { font-size: 1.3rem; margin: 1rem 0 0.5rem; }
-    .card {
-      background: white;
-      border-radius: 1rem;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      border: 1px solid #e5e5ea;
-    }
-    .upload-area {
-      border: 2px dashed #ccc;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      text-align: center;
-      background: #fafafc;
-      cursor: pointer;
-    }
-    .btn {
-      background: #1c1c1e;
-      color: white;
-      border: none;
-      padding: 0.7rem 1.2rem;
-      border-radius: 2rem;
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
-      margin: 0.25rem;
-    }
-    .btn-secondary { background: #e5e5ea; color: #1c1c1e; }
-    .btn-success { background: #2e7d32; }
-    .btn-warning { background: #ed6c02; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-    th, td {
-      border-bottom: 1px solid #e5e5ea;
-      padding: 0.75rem 0.5rem;
-      text-align: left;
-    }
-    th { background: #f8f8fa; }
-    input {
-      width: 100%;
-      padding: 0.4rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
-      font-size: 0.85rem;
-    }
-    .totals {
-      display: flex;
-      gap: 1.5rem;
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 2px solid #e5e5ea;
-      flex-wrap: wrap;
-    }
-    .log {
-      background: #1c1c1e;
-      color: #a5d6ff;
-      font-family: monospace;
-      font-size: 0.75rem;
-      padding: 0.75rem;
-      border-radius: 0.75rem;
-      max-height: 150px;
-      overflow-y: auto;
-    }
-    .pending-item {
-      border: 1px solid #e0e0e0;
-      border-radius: 0.75rem;
-      padding: 0.75rem;
-      margin-bottom: 0.75rem;
-      background: #fff8e1;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: flex-start;
-    }
-    .pending-preview {
-      flex: 0 0 80px;
-      max-width: 80px;
-    }
-    .pending-preview img, .pending-preview canvas {
-      width: 100%;
-      border-radius: 0.5rem;
-      border: 1px solid #ddd;
-    }
-    .pending-fields {
-      flex: 3;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      align-items: center;
-    }
-    .pending-fields input {
-      width: auto;
-      min-width: 100px;
-      flex: 1;
-    }
-    .pending-actions {
-      flex: 1;
-      display: flex;
-      gap: 0.5rem;
-      justify-content: flex-end;
-    }
-    @media (max-width: 700px) {
-      table, thead, tbody, th, td, tr { display: block; }
-      thead { display: none; }
-      tr {
-        margin-bottom: 1rem;
-        border: 1px solid #e5e5ea;
-        border-radius: 0.75rem;
-        padding: 0.5rem;
-      }
-      td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: none;
-        padding: 0.4rem 0;
-      }
-      td:before {
-        content: attr(data-label);
-        font-weight: 600;
-        width: 35%;
-      }
-      .pending-item { flex-direction: column; }
-      .pending-fields input { width: 100%; }
-      .pending-actions { justify-content: flex-start; }
-    }
-  </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-  </script>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width,
+initial-scale=1.0,
+viewport-fit=cover">
+
+<title>AEM France Travail</title>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color"
+content="#111111">
+
+<meta name="apple-mobile-web-app-capable"
+content="yes">
+
+<meta name="apple-mobile-web-app-status-bar-style"
+content="black">
+
+<link rel="apple-touch-icon"
+href="icon.png">
+
+<!-- PDF JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+<!-- ZIP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- OCR -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+}
+
+body{
+font-family:system-ui;
+background:#f5f5f7;
+padding:1rem;
+color:#111;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
+}
+
+.card{
+background:white;
+padding:1rem;
+border-radius:1rem;
+margin-bottom:1rem;
+box-shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+
+h1{
+margin-bottom:1rem;
+}
+
+.upload-area{
+border:2px dashed #bbb;
+padding:2rem;
+text-align:center;
+border-radius:1rem;
+background:#fafafa;
+cursor:pointer;
+}
+
+.upload-area:hover{
+background:#f0f0f0;
+}
+
+.btn{
+background:#111;
+color:white;
+border:none;
+padding:0.7rem 1rem;
+border-radius:1rem;
+margin:0.3rem;
+cursor:pointer;
+}
+
+.btn:hover{
+opacity:0.9;
+}
+
+.btn-green{
+background:#2e7d32;
+}
+
+.btn-orange{
+background:#ed6c02;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:1rem;
+}
+
+th,td{
+padding:0.7rem;
+border-bottom:1px solid #ddd;
+text-align:left;
+}
+
+th{
+background:#f5f5f5;
+}
+
+input{
+width:100%;
+padding:0.5rem;
+border:1px solid #ccc;
+border-radius:0.5rem;
+}
+
+.pending-item{
+border:1px solid #ddd;
+padding:1rem;
+border-radius:1rem;
+margin-bottom:1rem;
+background:#fff8e1;
+}
+
+.pending-preview img,
+.pending-preview canvas{
+max-width:120px;
+border-radius:0.5rem;
+border:1px solid #ddd;
+margin-bottom:1rem;
+}
+
+.pending-fields{
+display:grid;
+grid-template-columns:
+1fr 1fr 1fr 1fr;
+gap:0.5rem;
+margin-bottom:1rem;
+}
+
+.log{
+background:#111;
+color:#8fd3ff;
+padding:1rem;
+border-radius:1rem;
+font-family:monospace;
+max-height:180px;
+overflow:auto;
+font-size:0.8rem;
+}
+
+.totals{
+margin-top:1rem;
+font-weight:bold;
+display:flex;
+gap:2rem;
+flex-wrap:wrap;
+}
+
+@media(max-width:700px){
+
+.pending-fields{
+grid-template-columns:1fr;
+}
+
+table,thead,tbody,tr,td{
+display:block;
+}
+
+thead{
+display:none;
+}
+
+tr{
+margin-bottom:1rem;
+border:1px solid #ddd;
+padding:1rem;
+border-radius:1rem;
+}
+
+td{
+border:none;
+padding:0.3rem 0;
+}
+}
+
+</style>
+
 </head>
+
 <body>
+
 <div class="container">
-  <h1>📄 AEM France Travail</h1>
-  <div class="card">
-    <div class="upload-area" id="dropzone">
-      📂 Déposez vos fichiers (PDF, images, ZIP)<br>
-      ou <strong>cliquez pour sélectionner</strong>
-      <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.zip" style="display:none">
-    </div>
-    <div style="margin-top: 1rem;">
-      <button class="btn" id="processBtn">🔍 Importer des fichiers</button>
-      <button class="btn btn-secondary" id="addRowBtn">➕ Ajouter une ligne vide</button>
-      <button class="btn btn-secondary" id="exportJsonBtn">💾 Exporter JSON</button>
-      <button class="btn btn-secondary" id="exportPdfBtn">🖨️ Exporter PDF / PNG</button>
-      <button class="btn btn-secondary" id="clearBtn">🗑️ Tout effacer</button>
-    </div>
-  </div>
 
-  <!-- Zone des documents en attente de complétion -->
-  <div id="pendingZone" class="card" style="display: none;">
-    <h2>📌 Documents à compléter</h2>
-    <div id="pendingList"></div>
-  </div>
+<h1>📄 AEM France Travail</h1>
 
-  <div class="card">
-    <h3>📋 AEM validées</h3>
-    <div style="overflow-x: auto;">
-      <table id="aemTable">
-        <thead><tr><th>Période / Date</th><th>Employeur</th><th>Heures</th><th>Brut (€)</th><th></th></tr></thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
-    <div class="totals" id="totalsBlock"></div>
-  </div>
+<div class="card">
 
-  <div class="card">
-    <h3>📋 Journal</h3>
-    <div class="log" id="logArea">✅ Prêt. Importez vos fichiers (PDF, photos, ZIP).</div>
-  </div>
+<div class="upload-area"
+id="dropzone">
 
-  <div class="card" style="text-align: center; font-size: 0.8rem;">
-    📱 Installation : « Partager » → « Ajouter à l’écran d’accueil »
-  </div>
+📂 Déposez vos PDF / Photos / ZIP
+
+<br><br>
+
+ou cliquez ici
+
+<input type="file"
+id="fileInput"
+multiple
+accept=".pdf,.jpg,.jpeg,.png,.zip"
+style="display:none">
+
 </div>
 
+<div style="margin-top:1rem;">
+
+<button class="btn"
+id="processBtn">
+
+🔍 Importer
+
+</button>
+
+<button class="btn"
+id="addRowBtn">
+
+➕ Ajouter ligne manuelle
+
+</button>
+
+<button class="btn"
+id="exportJsonBtn">
+
+💾 Export JSON
+
+</button>
+
+<button class="btn"
+id="exportPdfBtn">
+
+🖨️ Export PDF
+
+</button>
+
+<button class="btn btn-orange"
+id="clearBtn">
+
+🗑️ Effacer
+
+</button>
+
+</div>
+
+</div>
+
+<!-- DOCUMENTS A VALIDER -->
+
+<div class="card"
+id="pendingZone"
+style="display:none;">
+
+<h2>
+📌 Documents à vérifier
+</h2>
+
+<br>
+
+<div id="pendingList"></div>
+
+</div>
+
+<!-- TABLEAU FINAL -->
+
+<div class="card">
+
+<h2>
+📋 Tableau AEM validées
+</h2>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Date</th>
+<th>Employeur</th>
+<th>Heures</th>
+<th>Brut (€)</th>
+<th></th>
+
+</tr>
+
+</thead>
+
+<tbody id="tableBody"></tbody>
+
+</table>
+
+<div class="totals"
+id="totalsBlock">
+
+</div>
+
+</div>
+
+<!-- LOGS -->
+
+<div class="card">
+
+<h2>
+📋 Journal
+</h2>
+
+<br>
+
+<div class="log"
+id="logArea">
+
+✅ Application prête.
+
+</div>
+
+</div>
+
+<!-- INSTALLATION -->
+
+<div class="card"
+style="text-align:center;
+font-size:0.85rem;">
+
+📱 Installation iPhone :
+Partager → Ajouter à l’écran d’accueil
+
+</div>
+
+</div>
+
+<!-- TES FICHIERS -->
+
+<script src="ocr.js"></script>
+
+<script src="parser.js"></script>
+
+<script src="app.js"></script>
+
 <script>
-  // ---------- État ----------
-  let aemItems = [];          // éléments validés dans le tableau final
-  let nextId = 1;
-  let pendingDocuments = [];  // { id, file, preview, extractedData, status }
-  let nextPendingId = 1;
 
-  // DOM elements
-  const dropzone = document.getElementById('dropzone');
-  const fileInput = document.getElementById('fileInput');
-  const processBtn = document.getElementById('processBtn');
-  const addRowBtn = document.getElementById('addRowBtn');
-  const exportJsonBtn = document.getElementById('exportJsonBtn');
-  const exportPdfBtn = document.getElementById('exportPdfBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const tableBody = document.getElementById('tableBody');
-  const totalsBlock = document.getElementById('totalsBlock');
-  const logArea = document.getElementById('logArea');
-  const pendingZone = document.getElementById('pendingZone');
-  const pendingList = document.getElementById('pendingList');
+if("serviceWorker" in navigator){
 
-  // Helper logs
-  function addLog(msg) {
-    const p = document.createElement('div');
-    p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-    logArea.appendChild(p);
-    logArea.scrollTop = logArea.scrollHeight;
-  }
+navigator.serviceWorker.register(
+"./service-worker.js"
+);
 
-  // Sauvegarde / chargement localStorage
-  function saveToLocalStorage() {
-    localStorage.setItem('aemData', JSON.stringify({ items: aemItems, nextId: nextId }));
-  }
+}
 
-  function loadFromLocalStorage() {
-    const raw = localStorage.getItem('aemData');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        aemItems = data.items || [];
-        nextId = data.nextId || 1;
-        renderTable();
-        addLog(`Chargement : ${aemItems.length} AEM.`);
-      } catch(e) {}
-    }
-  }
-
-  // Conversion de date pour tri
-  function parseDateToTimestamp(dateStr) {
-    if (!dateStr) return 0;
-    let clean = dateStr.replace(/ au /g, ' ').replace(/[^0-9\/]/g, ' ');
-    let parts = clean.match(/(\d{1,2})[\/\s](\d{1,2})[\/\s](\d{4})/);
-    if (parts) {
-      return new Date(parts[3], parts[2]-1, parts[1]).getTime();
-    }
-    return 0;
-  }
-
-  // Rendu tableau final
-  function renderTable() {
-    const sorted = [...aemItems].sort((a,b) => parseDateToTimestamp(a.date) - parseDateToTimestamp(b.date));
-    tableBody.innerHTML = '';
-    let totalHeures = 0, totalBrut = 0;
-    sorted.forEach(item => {
-      const row = tableBody.insertRow();
-      const tdDate = row.insertCell(0);
-      const dateInp = document.createElement('input');
-      dateInp.value = item.date || '';
-      dateInp.placeholder = "JJ/MM/AAAA ou JJ/MM/AAAA au JJ/MM/AAAA";
-      dateInp.onchange = e => { item.date = e.target.value; saveToLocalStorage(); renderTable(); };
-      tdDate.appendChild(dateInp);
-      tdDate.setAttribute('data-label', 'Période');
-
-      const tdEmp = row.insertCell(1);
-      const empInp = document.createElement('input');
-      empInp.value = item.employeur || '';
-      empInp.placeholder = 'Employeur';
-      empInp.onchange = e => { item.employeur = e.target.value; saveToLocalStorage(); renderTable(); };
-      tdEmp.appendChild(empInp);
-      tdEmp.setAttribute('data-label', 'Employeur');
-
-      const tdH = row.insertCell(2);
-      const hInp = document.createElement('input');
-      hInp.value = item.heures || '';
-      hInp.placeholder = 'Heures';
-      hInp.onchange = e => { item.heures = e.target.value; saveToLocalStorage(); renderTable(); };
-      tdH.appendChild(hInp);
-      tdH.setAttribute('data-label', 'Heures');
-
-      const tdBrut = row.insertCell(3);
-      const brutInp = document.createElement('input');
-      brutInp.value = item.brut || '';
-      brutInp.placeholder = 'Brut €';
-      brutInp.onchange = e => { item.brut = e.target.value; saveToLocalStorage(); renderTable(); };
-      tdBrut.appendChild(brutInp);
-      tdBrut.setAttribute('data-label', 'Brut');
-
-      const tdDel = row.insertCell(4);
-      const delBtn = document.createElement('button');
-      delBtn.textContent = '✖';
-      delBtn.style.background = 'none';
-      delBtn.style.border = 'none';
-      delBtn.style.fontSize = '1.2rem';
-      delBtn.style.cursor = 'pointer';
-      delBtn.onclick = () => {
-        aemItems = aemItems.filter(i => i.id !== item.id);
-        saveToLocalStorage();
-        renderTable();
-        addLog(`Supprimé : ${item.employeur} – ${item.date}`);
-      };
-      tdDel.appendChild(delBtn);
-
-      const h = parseFloat(item.heures);
-      const b = parseFloat(item.brut);
-      if (!isNaN(h)) totalHeures += h;
-      if (!isNaN(b)) totalBrut += b;
-    });
-    totalsBlock.innerHTML = `<div><strong>Total heures</strong> : ${totalHeures.toFixed(2)} h</div>
-                             <div><strong>Total brut</strong> : ${totalBrut.toFixed(2)} €</div>
-                             <div><strong>Nb AEM</strong> : ${sorted.length}</div>`;
-  }
-
-  function isDuplicate(newItem, existing) {
-    return existing.some(e => e.date === newItem.date && e.employeur === newItem.employeur && e.heures === newItem.heures && e.brut === newItem.brut);
-  }
-
-  function addAEMToTable(entry, sourceName) {
-    if (!entry.date || !entry.employeur) return false;
-    const newItem = { id: nextId++, date: entry.date, employeur: entry.employeur, heures: entry.heures || '', brut: entry.brut || '', source: sourceName };
-    if (!isDuplicate(newItem, aemItems)) {
-      aemItems.push(newItem);
-      saveToLocalStorage();
-      renderTable();
-      addLog(`✅ Ajoutée : ${entry.employeur} - ${entry.date} (heures: ${entry.heures || '?'}, brut: ${entry.brut || '?'})`);
-      return true;
-    } else {
-      addLog(`⚠️ Doublon ignoré : ${entry.employeur} - ${entry.date}`);
-      return false;
-    }
-  }
-
-  function addEmptyRow() {
-    const newItem = { id: nextId++, date: '', employeur: '', heures: '', brut: '', source: 'manuel' };
-    aemItems.push(newItem);
-    saveToLocalStorage();
-    renderTable();
-    addLog(`➕ Ligne vide ajoutée.`);
-  }
-
-  // Extraction depuis texte (PDF textuel)
-  function extractFromText(text) {
-    const clean = text.replace(/\s+/g, ' ').trim();
-    let dateDebut = '', dateFin = '';
-    const debutRegex = /Date de début du contrat\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
-    const finRegex = /Date de fin du contrat de travail\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
-    let m = clean.match(debutRegex);
-    if (m) dateDebut = `${m[1]}/${m[2]}/${m[3]}`;
-    m = clean.match(finRegex);
-    if (m) dateFin = `${m[1]}/${m[2]}/${m[3]}`;
-    let dateAffichee = '';
-    if (dateDebut && dateFin && dateDebut !== dateFin) {
-      dateAffichee = `${dateDebut} au ${dateFin}`;
-    } else if (dateDebut) {
-      dateAffichee = dateDebut;
-    } else {
-      const anyDate = clean.match(/(\d{1,2})[\/\s](\d{1,2})[\/\s](\d{4})/);
-      if (anyDate) dateAffichee = `${anyDate[1]}/${anyDate[2]}/${anyDate[3]}`;
-    }
-    let employeur = '';
-    const raisonRegex = /Raison Sociale\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
-    m = clean.match(raisonRegex);
-    if (m) employeur = m[1].trim();
-    let heures = '';
-    const heuresRegex = /Nombre d'heures effectives\s*:?\s*(\d+[\.,]?\d*)/i;
-    m = clean.match(heuresRegex);
-    if (m) heures = m[1].replace(',', '.');
-    let brut = '';
-    const brutRegex = /SALARIE BRUT\s*:?\s*(\d+[\.,]?\d*)/i;
-    m = clean.match(brutRegex);
-    if (m) brut = m[1].replace(',', '.');
-    if (dateAffichee && employeur) {
-      return { date: dateAffichee, employeur, heures, brut, complete: true };
-    } else {
-      // retour partiel
-      return { date: dateAffichee || '', employeur: employeur || '', heures, brut, complete: false };
-    }
-  }
-
-  // OCR via Tesseract
-  async function ocrImage(dataUrl, filename) {
-    addLog(`🔍 OCR sur ${filename}...`);
-    const worker = await Tesseract.createWorker('fra');
-    const { data: { text } } = await worker.recognize(dataUrl);
-    await worker.terminate();
-    addLog(`📝 OCR terminé pour ${filename}`);
-    const clean = text.replace(/\s+/g, ' ').trim();
-    // mêmes regex que ci-dessus
-    let dateDebut = '', dateFin = '';
-    const debutRegex = /Date de début du contrat\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
-    const finRegex = /Date de fin du contrat de travail\s*:?\s*(\d{1,2})\s*(\d{1,2})\s*(\d{4})/i;
-    let m = clean.match(debutRegex);
-    if (m) dateDebut = `${m[1]}/${m[2]}/${m[3]}`;
-    m = clean.match(finRegex);
-    if (m) dateFin = `${m[1]}/${m[2]}/${m[3]}`;
-    let dateAffichee = '';
-    if (dateDebut && dateFin && dateDebut !== dateFin) {
-      dateAffichee = `${dateDebut} au ${dateFin}`;
-    } else if (dateDebut) {
-      dateAffichee = dateDebut;
-    } else {
-      const anyDate = clean.match(/(\d{1,2})[\/\s](\d{1,2})[\/\s](\d{4})/);
-      if (anyDate) dateAffichee = `${anyDate[1]}/${anyDate[2]}/${anyDate[3]}`;
-    }
-    let employeur = '';
-    const raisonRegex = /Raison Sociale\s*:?\s*([A-Za-z0-9\s\-\'&]+?)(?:\s|$)/i;
-    m = clean.match(raisonRegex);
-    if (m) employeur = m[1].trim();
-    let heures = '';
-    const heuresRegex = /Nombre d'heures effectives\s*:?\s*(\d+[\.,]?\d*)/i;
-    m = clean.match(heuresRegex);
-    if (m) heures = m[1].replace(',', '.');
-    let brut = '';
-    const brutRegex = /SALARIE BRUT\s*:?\s*(\d+[\.,]?\d*)/i;
-    m = clean.match(brutRegex);
-    if (m) brut = m[1].replace(',', '.');
-    if (dateAffichee && employeur) {
-      return { date: dateAffichee, employeur, heures, brut, complete: true };
-    } else {
-      return { date: dateAffichee || '', employeur: employeur || '', heures, brut, complete: false };
-    }
-  }
-
-  // Générer aperçu d'un PDF (première page)
-  async function getPDFPreview(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 0.5 });
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const context = canvas.getContext('2d');
-    await page.render({ canvasContext: context, viewport: viewport }).promise;
-    return canvas;
-  }
-
-  // Traiter un fichier (parallèle)
-  async function processFile(file) {
-    const name = file.name;
-    addLog(`Analyse : ${name}`);
-    let extracted = null;
-    let preview = null;
-    let isImage = name.match(/\.(jpg|jpeg|png|heic)$/i);
-    let isPdf = name.endsWith('.pdf');
-    let isZip = name.endsWith('.zip');
-
-    if (isZip) {
-      const zip = await JSZip.loadAsync(file);
-      for (let [filename, zipEntry] of Object.entries(zip.files)) {
-        if (zipEntry.dir) continue;
-        const blob = await zipEntry.async('blob');
-        const innerFile = new File([blob], filename);
-        await processFile(innerFile);
-      }
-      return;
-    }
-
-    if (isImage) {
-      // Lire l'image en dataURL
-      const reader = new FileReader();
-      preview = await new Promise((resolve) => {
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      });
-      extracted = await ocrImage(preview, name);
-    } else if (isPdf) {
-      // Extraire texte d'abord
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        fullText += content.items.map(item => item.str).join(' ') + '\n';
-      }
-      if (fullText.trim().length > 0) {
-        extracted = extractFromText(fullText);
-      }
-      if (!extracted || !extracted.complete) {
-        // si pas de texte ou extraction incomplète -> OCR sur 1ère page
-        const canvas = await getPDFPreview(file);
-        preview = canvas;
-        const dataUrl = canvas.toDataURL('image/png');
-        const ocrResult = await ocrImage(dataUrl, name);
-        extracted = ocrResult;
-      } else {
-        preview = await getPDFPreview(file); // pour l'affichage si besoin
-      }
-    } else {
-      addLog(`Fichier ignoré : ${name}`);
-      return;
-    }
-
-    if (extracted && extracted.complete) {
-      // Ajout automatique au tableau
-      addAEMToTable(extracted, name);
-    } else {
-      // Ajout à la liste des documents en attente
-      const pendingId = nextPendingId++;
-      pendingDocuments.push({
-        id: pendingId,
-        file: file,
-        preview: preview,
-        extracted: extracted || { date: '', employeur: '', heures: '', brut: '' },
-        name: name
-      });
-      addLog(`📌 ${name} : extraction partielle, en attente de complétion.`);
-    }
-  }
-
-  async function processAllFiles(files) {
-    addLog(`Traitement de ${files.length} fichier(s) en parallèle...`);
-    pendingDocuments = [];
-    nextPendingId = 1;
-    // Traiter chaque fichier asynchrone sans attendre
-    const promises = files.map(f => processFile(f));
-    await Promise.all(promises);
-    addLog(`Analyse terminée. ${pendingDocuments.length} document(s) à compléter.`);
-    renderPendingList();
-  }
-
-  function renderPendingList() {
-    if (pendingDocuments.length === 0) {
-      pendingZone.style.display = 'none';
-      return;
-    }
-    pendingZone.style.display = 'block';
-    pendingList.innerHTML = '';
-    for (const doc of pendingDocuments) {
-      const div = document.createElement('div');
-      div.className = 'pending-item';
-      const previewDiv = document.createElement('div');
-      previewDiv.className = 'pending-preview';
-      if (doc.preview) {
-        if (typeof doc.preview === 'string') {
-          const img = document.createElement('img');
-          img.src = doc.preview;
-          previewDiv.appendChild(img);
-        } else if (doc.preview instanceof HTMLCanvasElement) {
-          previewDiv.appendChild(doc.preview);
-        }
-      } else {
-        previewDiv.innerHTML = '<div>Aperçu indispo</div>';
-      }
-      div.appendChild(previewDiv);
-
-      const fieldsDiv = document.createElement('div');
-      fieldsDiv.className = 'pending-fields';
-      fieldsDiv.innerHTML = `
-        <input type="text" placeholder="Période (JJ/MM/AAAA ou JJ/MM/AAAA au JJ/MM/AAAA)" value="${escapeHtml(doc.extracted.date || '')}" data-field="date" data-id="${doc.id}">
-        <input type="text" placeholder="Employeur" value="${escapeHtml(doc.extracted.employeur || '')}" data-field="employeur" data-id="${doc.id}">
-        <input type="text" placeholder="Heures" value="${escapeHtml(doc.extracted.heures || '')}" data-field="heures" data-id="${doc.id}">
-        <input type="text" placeholder="Brut €" value="${escapeHtml(doc.extracted.brut || '')}" data-field="brut" data-id="${doc.id}">
-      `;
-      div.appendChild(fieldsDiv);
-
-      const actionsDiv = document.createElement('div');
-      actionsDiv.className = 'pending-actions';
-      const validateBtn = document.createElement('button');
-      validateBtn.textContent = '✅ Valider';
-      validateBtn.className = 'btn btn-success';
-      validateBtn.style.fontSize = '0.8rem';
-      validateBtn.style.padding = '0.4rem 0.8rem';
-      validateBtn.onclick = () => validatePending(doc.id);
-      const ignoreBtn = document.createElement('button');
-      ignoreBtn.textContent = '❌ Ignorer';
-      ignoreBtn.className = 'btn btn-secondary';
-      ignoreBtn.style.fontSize = '0.8rem';
-      ignoreBtn.style.padding = '0.4rem 0.8rem';
-      ignoreBtn.onclick = () => ignorePending(doc.id);
-      actionsDiv.appendChild(validateBtn);
-      actionsDiv.appendChild(ignoreBtn);
-      div.appendChild(actionsDiv);
-      pendingList.appendChild(div);
-    }
-    // Attacher les événements de mise à jour des champs
-    document.querySelectorAll('.pending-fields input').forEach(inp => {
-      inp.addEventListener('change', (e) => {
-        const id = parseInt(inp.dataset.id);
-        const field = inp.dataset.field;
-        const doc = pendingDocuments.find(d => d.id === id);
-        if (doc) {
-          doc.extracted[field] = inp.value;
-        }
-      });
-    });
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-      if (m === '&') return '&amp;';
-      if (m === '<') return '&lt;';
-      if (m === '>') return '&gt;';
-      return m;
-    });
-  }
-
-  function validatePending(id) {
-    const doc = pendingDocuments.find(d => d.id === id);
-    if (!doc) return;
-    const { date, employeur, heures, brut } = doc.extracted;
-    if (date && employeur) {
-      addAEMToTable({ date, employeur, heures, brut }, doc.name + ' (manuel)');
-      pendingDocuments = pendingDocuments.filter(d => d.id !== id);
-      renderPendingList();
-    } else {
-      addLog(`❌ Validation impossible : date et employeur requis pour ${doc.name}`);
-    }
-  }
-
-  function ignorePending(id) {
-    pendingDocuments = pendingDocuments.filter(d => d.id !== id);
-    renderPendingList();
-    addLog(`🗑️ Document ignoré.`);
-  }
-
-  function exportToPDF() {
-    window.print();
-  }
-
-  // Événements UI
-  dropzone.addEventListener('click', () => fileInput.click());
-  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.style.background = '#eef2ff'; });
-  dropzone.addEventListener('dragleave', () => dropzone.style.background = '#fafafc');
-  dropzone.addEventListener('drop', async e => {
-    e.preventDefault();
-    dropzone.style.background = '#fafafc';
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length) await processAllFiles(files);
-  });
-  fileInput.addEventListener('change', async e => {
-    const files = Array.from(e.target.files);
-    if (files.length) await processAllFiles(files);
-    fileInput.value = '';
-  });
-  processBtn.addEventListener('click', () => fileInput.click());
-  addRowBtn.addEventListener('click', () => addEmptyRow());
-  exportJsonBtn.addEventListener('click', () => {
-    const dataStr = JSON.stringify(aemItems, null, 2);
-    const blob = new Blob([dataStr], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `aem_export_${new Date().toISOString().slice(0,19)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    addLog('Export JSON effectué.');
-  });
-  exportPdfBtn.addEventListener('click', () => exportToPDF());
-  clearBtn.addEventListener('click', () => {
-    if (confirm('Effacer TOUTES les AEM ?')) {
-      aemItems = [];
-      nextId = 1;
-      pendingDocuments = [];
-      renderPendingList();
-      saveToLocalStorage();
-      renderTable();
-      addLog('Toutes les données ont été effacées.');
-    }
-  });
-
-  loadFromLocalStorage();
 </script>
+
 </body>
 </html>
